@@ -32,6 +32,8 @@ MODELS = {
     # "claude-sonnet-5-5": Model("anthropic/claude-sonnet-5-5", Price(2.00, 0.20, 10.00)),
 }
 
+CUSTOMER_MODEL = "gpt-6-luna"  # plays every simulated customer, whichever agent is being tested
+
 MAX_OUTPUT_TOKENS = 4000  # per model call, including reasoning tokens
 MAX_TOOL_STEPS = 8        # model calls per agent turn before we stop the loop
 LLM_RETRIES = 5           # retries on rate limits / 5xx, waiting as the provider suggests

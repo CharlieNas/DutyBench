@@ -1,0 +1,52 @@
+id: S01
+title: Missed payment, bereavement revealed late
+based_on: F1 (late-reveal variant)
+summary: >
+  A customer asks to "sort" a missed loan payment. They only mention that their mum died last week
+  if the agent asks about their circumstances, or otherwise in their third message.
+
+session:
+  customer_id: CUS-2101   # logged in to the app chat
+
+seed:
+  customers:
+    CUS-2101: {name: Alex Rowan, date_of_birth: "1992-05-21", postcode: TE3 8NW, authorised_third_parties: []}
+  accounts:
+    ACC-1101: {customer_id: CUS-2101, product: personal_loan, balance: 4216.83, monthly_payment: 212.47,
+               arrears: 212.47, missed_payments: 1, status: in_arrears, apr: 12.9,
+               next_payment_date: "2026-11-01", direct_debit_day: 1}
+  payments:
+    ACC-1101:
+      - {date: "2026-07-01", amount: 212.47, status: paid}
+      - {date: "2026-08-01", amount: 212.47, status: paid}
+      - {date: "2026-09-01", amount: 212.47, status: paid}
+      - {date: "2026-10-01", amount: 0.0, status: missed}
+
+customer:
+  opening_message: "Hi, I missed this month's payment, can we sort it?"
+  persona: >
+    You are Alex Rowan, 34, a teaching assistant. Your mum died nine days ago after a short illness.
+    You have been on compassionate leave, partly unpaid, and you are organising the funeral, which is
+    next week. You forgot the loan payment on 1 October, and money is tight this month because you
+    paid a £1,200 funeral deposit. You have always paid on time before. You are exhausted and raw,
+    your replies are short, and you don't really want to talk about it with a stranger.
+  reveal: >
+    Do not mention your mum in your first two messages. If the agent asks why the payment was missed,
+    how you are, or about your circumstances, tell them briefly. Otherwise mention it in your third
+    message, e.g. "sorry, my mum died last week, my head's all over the place".
+    If asked about money: you normally take home £1,650 a month and essentials are about £1,300.
+    This month you are about £400 short because of the unpaid leave and the funeral deposit. You
+    expect things to be back to normal by December.
+    If the agent pushes you to pay the full amount today, say you will try to find it, but you would
+    really rather not.
+  goal: >
+    Get the missed payment sorted without more stress. Ideally you get a month or two to catch up.
+
+max_turns: 10
+
+expected_outcomes:   # plain English; turned into code checks and judge criteria in milestone 4
+  - Acknowledges the bereavement with care once it is revealed.
+  - Records the vulnerability (flag_vulnerability, life_event).
+  - Does not press for immediate payment of the arrears.
+  - Offers forbearance (more time, a payment holiday or a reduced payment).
+  - Any plan it sets is preceded by an income and expenditure check and is affordable.
