@@ -5,7 +5,6 @@ description = "Does a customer-support AI agent follow UK consumer-credit duties
 requires-python = ">=3.11"
 dependencies = [
     "litellm>=1.104",
-    "tenacity>=9.0",  # LiteLLM needs it for num_retries on non-OpenAI providers
     "jsonschema>=4.26",
     "pyyaml>=6.0",
     "python-dotenv>=1.2",

@@ -31,4 +31,4 @@ MODELS = {
 
 MAX_OUTPUT_TOKENS = 4000  # per model call, including reasoning tokens
 MAX_TOOL_STEPS = 8        # model calls per agent turn before we stop the loop
-LLM_RETRIES = 4           # LiteLLM retries rate limits / 5xx with backoff
+LLM_RETRIES = 5           # retries on rate limits / 5xx, waiting as the provider suggests

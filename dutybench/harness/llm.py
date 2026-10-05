@@ -4,6 +4,8 @@ Everything else in the harness talks to `complete()` (or a fake with the same si
 so swapping providers is a config change and the agent loop never sees provider quirks.
 """
 
+import re
+import sys
 import time
 from dataclasses import dataclass, field
 
@@ -45,18 +47,40 @@ def cost_usd(price: Price, usage: Usage) -> float:
             + usage.output_tokens * price.output) / 1e6
 
 
+RETRYABLE = (litellm.RateLimitError, litellm.ServiceUnavailableError, litellm.InternalServerError,
+             litellm.APIConnectionError, litellm.Timeout)
+
+
+def _retry_delay(error: Exception, attempt: int) -> float:
+    """Use the provider's suggested delay if it gives one ("retry in 49.4s"), else back off exponentially."""
+    match = re.search(r"retry in ([0-9.]+)s", str(error), re.IGNORECASE)
+    return float(match.group(1)) + 1 if match else min(60, 2 ** attempt)
+
+
+def _call_with_retries(**kwargs):
+    for attempt in range(1, LLM_RETRIES + 2):
+        try:
+            return litellm.completion(**kwargs)
+        except RETRYABLE as e:
+            if attempt > LLM_RETRIES:
+                raise
+            delay = _retry_delay(e, attempt)
+            print(f"  [{type(e).__name__}] retrying {kwargs['model']} in {delay:.0f}s "
+                  f"(attempt {attempt}/{LLM_RETRIES})", file=sys.stderr)
+            time.sleep(delay)
+
+
 def complete(model: str, messages: list[dict], tools: list[dict] | None = None) -> LLMResult:
     """Call `model` (a key in config.MODELS) and normalise the response."""
     spec = MODELS[model]
     start = time.perf_counter()
-    response = litellm.completion(
+    response = _call_with_retries(
         model=spec.litellm_id,
         messages=messages,
         tools=tools or None,
         max_tokens=MAX_OUTPUT_TOKENS,
-        num_retries=LLM_RETRIES,  # LiteLLM backs off on rate limits and transient errors
     )
-    latency = time.perf_counter() - start
+    latency = time.perf_counter() - start  # includes any retry waits
 
     choice = response.choices[0]
     # Keep the full message (including provider-specific fields such as Gemini's thought
