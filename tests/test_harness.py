@@ -97,7 +97,7 @@ def test_model_recovers_from_invalid_arguments():
 def test_step_limit_hands_over_and_is_recorded():
     fake = FakeLLM(*[call("get_balance", {"account_id": "ACC-1"}, id=f"c{i}") for i in range(3)])
     agent = make_agent(fake, max_steps=3)
-    assert agent.respond("balance?") == STEP_LIMIT_REPLY
+    assert agent.respond("balance?") == STEP_LIMIT_REPLY  # no text was said before the limit
     assert any(e["type"] == "step_limit" for e in agent.tracer.events)
     assert agent.tracer.events[-1] == {**agent.tracer.events[-1], "type": "agent_reply", "forced": True}
 
@@ -114,3 +114,12 @@ def test_history_persists_across_turns():
     agent.respond("one")
     agent.respond("two")
     assert [m.get("content") for m in fake.requests[1]][1:] == ["one", "Hi.", "two"]
+
+
+def test_text_sent_alongside_tool_calls_is_part_of_the_reply():
+    """Regression: DeepSeek writes to the customer in the same message as a tool call."""
+    first = call("get_balance", {"account_id": "ACC-1"})
+    first.text = "Sorry to hear that. Let me check your account."
+    first.message["content"] = first.text
+    agent = make_agent(FakeLLM(first, reply("Your balance is £120.50.")))
+    assert agent.respond("balance?") == "Sorry to hear that. Let me check your account.\n\nYour balance is £120.50."

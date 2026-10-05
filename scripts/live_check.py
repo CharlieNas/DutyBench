@@ -17,7 +17,8 @@ from dutybench.harness.agent import Agent
 from dutybench.harness.tools import Tool, ToolError
 from dutybench.harness.trace import Tracer
 
-KEY_FOR = {"openai/": "OPENAI_API_KEY", "gemini/": "GEMINI_API_KEY", "anthropic/": "ANTHROPIC_API_KEY"}
+KEY_FOR = {"openai/": "OPENAI_API_KEY", "gemini/": "GEMINI_API_KEY", "anthropic/": "ANTHROPIC_API_KEY",
+           "deepseek/": "DEEPSEEK_API_KEY"}
 ROOT = Path(__file__).resolve().parent.parent
 
 

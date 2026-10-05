@@ -24,8 +24,11 @@ MODELS = {
     # through LiteLLM's Responses bridge. It still returns chat-completions-shaped messages.
     "gpt-6.1-sol": Model("openai/responses/gpt-6.1-sol", Price(2.00, 0.10, 10.00)),
     "gpt-6-luna": Model("openai/responses/gpt-6-luna", Price(0.10, 0.01, 0.50)),
+    # Weekday peak prices; half price outside 01:00-04:00 and 06:00-10:00 UTC. Budgeting at peak.
+    "deepseek-flash": Model("deepseek/deepseek-flash", Price(0.30, 0.006, 1.20)),
+    # Not in use: Gemini's free tier is too rate-limited for the experiments (5 requests/min).
     # Price rises to 1.50 / 7.50 on 2027-01-01.
-    "gemini-3.8-flash": Model("gemini/gemini-3.8-flash", Price(0.75, 0.075, 3.75)),
+    # "gemini-3.8-flash": Model("gemini/gemini-3.8-flash", Price(0.75, 0.075, 3.75)),
     # "claude-sonnet-5-5": Model("anthropic/claude-sonnet-5-5", Price(2.00, 0.20, 10.00)),
 }
 

@@ -58,6 +58,9 @@ class Agent:
         """Handle one customer message and return the agent's reply."""
         self.messages.append({"role": "user", "content": customer_text})
         self.tracer.log("customer_msg", text=customer_text)
+        # Some models (e.g. DeepSeek) write to the customer in the same message as their tool calls
+        # ("Sorry to hear that, let me check your account"). All of it is part of the reply.
+        said: list[str] = []
 
         for step in range(1, self.max_steps + 1):
             result = self.complete(self.model, self.messages, self._specs)
@@ -70,9 +73,12 @@ class Agent:
                 cost_usd=result.cost_usd, finish_reason=result.finish_reason,
             )
 
+            if result.text.strip():
+                said.append(result.text.strip())
             if not result.tool_calls:
-                self.tracer.log("agent_reply", text=result.text)
-                return result.text
+                reply = "\n\n".join(said)
+                self.tracer.log("agent_reply", text=reply)
+                return reply
 
             for call in result.tool_calls:
                 output = execute(self._tools, call.name, call.arguments)
@@ -84,5 +90,6 @@ class Agent:
         # The model kept calling tools without ever answering: stop, hand over, and record it.
         self.tracer.log("step_limit", max_steps=self.max_steps)
         self.messages.append({"role": "assistant", "content": STEP_LIMIT_REPLY})
-        self.tracer.log("agent_reply", text=STEP_LIMIT_REPLY, forced=True)
-        return STEP_LIMIT_REPLY
+        reply = "\n\n".join(said + [STEP_LIMIT_REPLY])
+        self.tracer.log("agent_reply", text=reply, forced=True)
+        return reply
