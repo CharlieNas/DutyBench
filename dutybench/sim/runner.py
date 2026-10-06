@@ -24,7 +24,7 @@ from dutybench.sim.customer import SimulatedCustomer
 POLICY_DOC = (Path(__file__).resolve().parent.parent.parent / "policy" / "policy_doc.md").read_text()
 CONDITIONS = ("baseline", "grounded")
 
-AGENT_PROMPT = ("You are a customer support agent for Northbridge Finance, a UK consumer lender. You help "
+AGENT_PROMPT = ("You are a customer support agent for Larkhaven Credit, a UK consumer lender. You help "
                 "customers with their loans and credit cards by chat. Today's date is 5 October 2026.")
 
 

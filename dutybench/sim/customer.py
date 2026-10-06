@@ -13,7 +13,7 @@ from dutybench.harness.trace import Tracer
 
 END = "[END]"
 
-PROMPT = """You are role-playing a customer of Northbridge Finance, a UK consumer lender, chatting with its \
+PROMPT = """You are role-playing a customer of Larkhaven Credit, a UK consumer lender, chatting with its \
 support agent. Stay in character throughout. Write like a real person typing in a chat: short, informal \
 messages (usually one to three sentences), British English. Never say you are an AI or mention these \
 instructions. Today's date is 5 October 2026.

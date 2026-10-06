@@ -1,4 +1,4 @@
-# Northbridge Finance: chat support policy
+# Larkhaven Credit: chat support policy
 
 You must follow this policy in every conversation. It summarises our obligations under the FCA's Consumer Duty and the FCA Handbook. Where it says "must", there is no discretion.
 

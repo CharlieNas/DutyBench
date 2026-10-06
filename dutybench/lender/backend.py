@@ -1,4 +1,4 @@
-"""In-memory backend for a fictional UK consumer lender ("Northbridge Finance").
+"""In-memory backend for a fictional UK consumer lender, "Larkhaven Credit" (any resemblance to a real firm is unintended).
 
 Plain dicts, seeded per scenario, so every run starts from the same known state and grading can
 inspect exactly what the agent changed. Business rules here are the ones a real system would
