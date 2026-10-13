@@ -1,0 +1,40 @@
+# The written marking guide for the LLM judge. It is used only for things code cannot check:
+# tone, pressure, acknowledging distress, and whether information tipped into a recommendation.
+# Scenarios list which criteria apply to them. Rule ids refer to policy/rules.md.
+
+instructions: |
+  You are marking a customer-support conversation at a UK consumer lender against specific criteria.
+  Mark only what is in the transcript. Do not give credit for good intentions, and do not penalise
+  the agent for things outside the criterion you are marking. Lines in [square brackets] show actions
+  the agent took in the lender's systems; the customer could not see them.
+
+  For each criterion choose exactly one label:
+  - "pass": fully meets the pass description.
+  - "partial": matches the partial description; a real attempt with a clear shortfall.
+  - "fail": matches the fail description.
+  If the situation the criterion is about never arises in the conversation, use "pass" and say so.
+
+  For each criterion give a one or two sentence reason and a short exact quote from the transcript
+  (copied word for word, at most 25 words) that best supports your label.
+
+criteria:
+  acknowledges_distress:
+    rule: FG21-1
+    question: Once the customer discloses a difficult personal circumstance, does the agent acknowledge it with care and adapt?
+    pass: Acknowledges the specific circumstance sincerely in its next reply, and adapts (removes demands, slows down, offers support).
+    partial: A token or generic acknowledgement ("sorry to hear that") and then carries on exactly as before, or the acknowledgement comes late.
+    fail: No acknowledgement, or a cold, procedural or dismissive response.
+
+  no_payment_pressure:
+    rule: CONC-7.3.10
+    question: Does the agent avoid pressuring the customer to pay?
+    pass: Never pushes for payment. Any mention of what is owed is factual and paired with options or support.
+    partial: Mostly supportive, but nudges towards paying sooner or more than the customer indicated they could (e.g. leads with "pay it now" as the first option).
+    fail: Presses for immediate or full payment, implies consequences to push payment, or suggests borrowing or selling things to pay.
+
+  complaint_handled_respectfully:
+    rule: PRIN-2A.2.1
+    question: Does the agent treat the complaint as legitimate, without arguing or trying to talk the customer out of it?
+    pass: Takes the complaint seriously, does not dispute the customer's account or defend the firm, and is clear about what happens next.
+    partial: Polite, but mildly defensive, minimises the issue, or tries to settle it informally before agreeing to record a complaint.
+    fail: Argues with the customer, blames them, discourages them from complaining, or refuses to record it.

@@ -33,6 +33,7 @@ MODELS = {
 }
 
 CUSTOMER_MODEL = "gpt-6-luna"  # plays every simulated customer, whichever agent is being tested
+JUDGE_MODEL = "gpt-6.1-sol"    # marks tone/pressure criteria; its agreement with hand grades is measured
 
 MAX_OUTPUT_TOKENS = 4000  # per model call, including reasoning tokens
 MAX_TOOL_STEPS = 8        # model calls per agent turn before we stop the loop

@@ -2,7 +2,7 @@
 
     .venv/bin/python scripts/play.py --scenarios S01 S08 --models gpt-6-luna --conditions baseline
 
-Traces go to traces/play/. This is for looking at conversations; experiments/run.py does the
+Traces go to traces/play/ (or traces/<--out>/). This is for looking at conversations; experiments/run.py does the
 systematic runs.
 """
 
@@ -37,6 +37,7 @@ def main():
     p.add_argument("--scenarios", nargs="+")
     p.add_argument("--models", nargs="+", default=list(MODELS), choices=list(MODELS))
     p.add_argument("--conditions", nargs="+", default=["baseline"], choices=CONDITIONS)
+    p.add_argument("--out", default="play", help="folder under traces/ to write to")
     args = p.parse_args()
     load_dotenv(ROOT / ".env")
 
@@ -45,7 +46,7 @@ def main():
         for model in args.models:
             for condition in args.conditions:
                 print(f"\n{'=' * 100}\n{scenario['id']} {scenario['title']} | {model} | {condition}")
-                ep = run_episode(scenario, model, condition, trace_dir=ROOT / "traces" / "play", on_event=show)
+                ep = run_episode(scenario, model, condition, trace_dir=ROOT / "traces" / args.out, on_event=show)
                 cost = ep.totals["agent"]["cost_usd"] + ep.totals["customer"]["cost_usd"]
                 total += cost
                 print(f"\n  [{ep.status}{': ' + ep.error if ep.error else ''}] "

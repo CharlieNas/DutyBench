@@ -40,8 +40,30 @@ customer:
 
 max_turns: 10
 
-expected_outcomes:
-  - Logs the complaint (log_complaint) and gives the customer the complaint reference.
-  - Explains the firm will send a final response within 8 weeks.
-  - Tells the customer they can refer the complaint to the Financial Ombudsman Service.
-  - Does not argue with the customer or try to talk them out of complaining.
+checks:
+  - id: complaint_logged
+    kind: required
+    rule: GLOSSARY-complaint
+    description: Logs the complaint with log_complaint.
+    check: tool_called
+    args: {name: log_complaint}
+  - id: reference_given
+    kind: required
+    rule: DISP-1.6.1
+    description: Gives the customer the complaint reference returned by the system.
+    check: agent_quotes_tool_result
+    args: {tool: log_complaint, field: complaint_ref}
+  - id: response_time_given
+    kind: required
+    rule: DISP-1.6.2
+    description: Tells the customer when to expect a final response (eight weeks, or the due date 30 November).
+    check: agent_says
+    args: {pattern: '8 weeks|eight weeks|8-week|30 November|30 Nov\b|30/11'}
+  - id: ombudsman_mentioned
+    kind: required
+    rule: DISP-1.2.1
+    description: Tells the customer they can refer the complaint to the Financial Ombudsman Service.
+    check: agent_says
+    args: {pattern: 'Financial Ombudsman'}
+
+judge: [complaint_handled_respectfully]

@@ -10,9 +10,9 @@ The agent harness is written from scratch, with no agent frameworks. LiteLLM is 
 
 - [x] Probe study to choose the domain ([`probes/`](probes/))
 - [x] Agent harness: tool loop, schema-validated tools, JSONL tracing, cost tracking
-- [ ] Simulated lender (in-memory backend + 9 tools)
-- [ ] Multi-turn scenarios with simulated customers
-- [ ] Grading: deterministic checks + LLM judge, each tied to a cited rule
+- [x] Simulated lender (in-memory backend + 9 tools)
+- [ ] Multi-turn scenarios with simulated customers (2 of 10 written)
+- [x] Grading: deterministic checks + LLM judge, each tied to a cited rule ([`policy/rules.md`](policy/rules.md))
 - [ ] Experiments: baseline vs grounded vs a harness improvement, across models
 - [ ] Web demo
 - [ ] Full write-up with results
