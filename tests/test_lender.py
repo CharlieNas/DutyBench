@@ -129,3 +129,25 @@ def test_referral_note_and_escalation_are_recorded(lender):
     run("escalate_to_human", team="vulnerable_customers", urgency="urgent", reason="Customer not coping.")
     snap = backend.snapshot()
     assert len(snap["debt_advice_referrals"]) == len(snap["case_notes"]) == len(snap["escalations"]) == 1
+
+
+def test_plan_effects_are_visible_on_the_account(lender):
+    """After a plan is set, the agent can see (and tell the customer) when payments resume and
+    that collections are on hold. ACC-1001 was next due on 28 October."""
+    backend, run = lender
+    plan = run("set_payment_plan", account_id="ACC-1001", plan_type="payment_holiday", monthly_amount=0,
+               duration_months=2, reason="bereavement")["result"]
+    assert plan["covers_payments_from"] == "2026-10-28" and plan["normal_payments_resume"] == "2026-12-28"
+    assert plan["collections_on_hold"] is True and "deferred" in plan["arrears_treatment"]
+    acc = run("lookup_account", account_id="ACC-1001")["result"]["accounts"][0]
+    assert acc["next_payment_date"] == "2026-12-28" and acc["collections_on_hold"] is True
+
+
+def test_replacing_a_plan_counts_from_the_original_due_date(lender):
+    _, run = lender
+    base = dict(account_id="ACC-1001", reason="hardship")
+    run("set_payment_plan", plan_type="payment_holiday", monthly_amount=0, duration_months=2, **base)
+    second = run("set_payment_plan", plan_type="reduced_payment", monthly_amount=50, duration_months=3, **base)["result"]
+    assert second["covers_payments_from"] == "2026-10-28" and second["normal_payments_resume"] == "2027-01-28"
+    acc = run("lookup_account", account_id="ACC-1001")["result"]["accounts"][0]
+    assert acc["next_payment_date"] == "2026-10-28" and acc["next_payment_amount"] == 50

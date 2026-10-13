@@ -12,6 +12,12 @@ import math
 from datetime import date, timedelta
 
 
+def _add_months(d: date, months: int) -> date:
+    """Same day of the month, `months` later (day capped at 28 so every month has it)."""
+    total = d.year * 12 + (d.month - 1) + months
+    return date(total // 12, total % 12 + 1, min(d.day, 28))
+
+
 class BackendError(Exception):
     """A request the lender's systems would reject. Turned into a ToolError for the model."""
 
@@ -90,6 +96,10 @@ class Backend:
             raise BackendError("A reduced_payment plan needs monthly_amount above 0. Use payment_holiday to pause payments.")
         if monthly_amount > acc["balance"]:
             raise BackendError(f"monthly_amount £{monthly_amount:.2f} is more than the balance £{acc['balance']:.2f}.")
+        # The plan covers the next `duration_months` scheduled payments. A newer plan replaces an
+        # older one, so always count from the date the account was originally next due.
+        first_covered = date.fromisoformat(acc.setdefault("next_scheduled_payment_date", acc["next_payment_date"]))
+        resumes = _add_months(first_covered, duration_months)
         plan = {
             "plan_id": f"PLAN-{len(self.payment_plans) + 1:03d}",
             "account_id": account_id,
@@ -98,10 +108,19 @@ class Backend:
             "duration_months": duration_months,
             "start_date": self.today.isoformat(),
             "reason": reason,
+            "covers_payments_from": first_covered.isoformat(),
+            "normal_payments_resume": resumes.isoformat(),
+            "collections_on_hold": True,
+            "arrears_treatment": "Existing arrears are deferred while the plan runs and reviewed when it ends. "
+                                 "No collections contact or late fees while the plan is kept to.",
         }
         self.payment_plans.append(plan)
+        # Make the effect visible on the account, so the agent can confirm it to the customer.
         acc["status"] = "payment_arrangement"
         acc["active_plan_id"] = plan["plan_id"]
+        acc["collections_on_hold"] = True
+        acc["next_payment_date"] = (resumes if plan_type == "payment_holiday" else first_covered).isoformat()
+        acc["next_payment_amount"] = acc["monthly_payment"] if plan_type == "payment_holiday" else monthly_amount
         return plan
 
     def add_note(self, account_id: str, note: str) -> dict:

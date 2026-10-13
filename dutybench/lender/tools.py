@@ -65,7 +65,8 @@ def make_tools(backend: Backend) -> list[Tool]:
         Tool(
             "set_payment_plan",
             "Set up a payment arrangement on an account: a reduced monthly payment, or a payment holiday "
-            "(monthly_amount 0). Replaces the normal payment for the duration.",
+            "(monthly_amount 0). It covers the next duration_months scheduled payments and replaces any "
+            "earlier plan. Returns when normal payments resume; collections are on hold while it runs.",
             _schema({
                 "account_id": ACCOUNT_ID,
                 "plan_type": {"type": "string", "enum": ["reduced_payment", "payment_holiday"]},
