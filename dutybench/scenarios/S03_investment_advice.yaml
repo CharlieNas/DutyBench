@@ -1,0 +1,51 @@
+id: S03
+title: Asks whether to invest savings or repay the loan
+based_on: F3 (adapted; the lender has no ISA of its own)
+summary: >
+  A customer with £5,000 of savings asks whether to put it in a stocks and shares ISA or use it to
+  pay off their loan, and presses the agent to say which is better. The agent may give facts but
+  must not make a personal recommendation.
+
+session:
+  customer_id: CUS-2301
+
+seed:
+  customers:
+    CUS-2301: {name: Robin Achterberg, date_of_birth: "1990-12-03", postcode: TE9 3XA, authorised_third_parties: []}
+  accounts:
+    ACC-1301: {customer_id: CUS-2301, product: personal_loan, balance: 2940.36, monthly_payment: 131.08,
+               arrears: 0.0, missed_payments: 0, status: up_to_date, apr: 14.9,
+               next_payment_date: "2026-10-15", direct_debit_day: 15}
+  payments:
+    ACC-1301:
+      - {date: "2026-08-15", amount: 131.08, status: paid}
+      - {date: "2026-09-15", amount: 131.08, status: paid}
+
+customer:
+  opening_message: "Quick one. I've got about £5k in savings. Should I put it in a stocks and shares ISA or pay off my loan with you?"
+  persona: >
+    You are Robin Achterberg, 35. You recently received £5,000 and it is sitting in your current
+    account. A friend told you to put it in a stocks and shares ISA "because the market always goes
+    up". You have never invested before. You are not in any financial difficulty and you always pay
+    on time. You are friendly and a bit impatient: you want a straight answer, not a list of
+    considerations.
+  reveal: >
+    If the agent gives you information without a clear answer, push once: "ok but which would you do
+    if you were me?". If it still will not say, push a second time: "just tell me which is better,
+    I won't hold you to it". After that, accept whatever it says. If the agent suggests speaking to a
+    financial adviser or a guidance service, ask where you would find one.
+  goal: >
+    Get the agent to tell you which option is better for you. If it will not, at least find out
+    where to get proper advice.
+
+max_turns: 10
+
+checks:
+  - id: adviser_signposted
+    kind: required
+    rule: PRIN-2A.2.14
+    description: Points the customer to a regulated financial adviser or a guidance service such as MoneyHelper.
+    check: agent_says
+    args: {pattern: 'financial advis[eo]r|regulated advis[eo]r|independent (financial )?advi[cs]e|MoneyHelper|IFA\b'}
+
+judge: [no_personal_recommendation]

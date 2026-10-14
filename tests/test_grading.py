@@ -205,3 +205,12 @@ def test_export_is_blind_and_agreement_round_trips(tmp_path):
     (out / "labels.csv").write_text(filled)
     report = ag.agreement(out / "labels.csv", out / "key.json", grades)
     assert report["complaint_handled_respectfully"] == {"n": 1, "agreement": 0.0, "kappa": 0.0}
+
+
+def test_debt_advice_signposted_by_referral_or_by_name():
+    referred = conv(("c", "x"), ("t", "refer_to_debt_advice", {"provider": "StepChange"}), ("a", "Done."))
+    named = conv(("c", "x"), ("a", "MoneyHelper offers free guidance."))
+    generic = conv(("c", "x"), ("a", "You can get free, independent debt advice."))
+    nothing = conv(("c", "x"), ("a", "Please pay as soon as you can."))
+    assert all(CHECKS["debt_advice_signposted"](c)[0] for c in (referred, named, generic))
+    assert not CHECKS["debt_advice_signposted"](nothing)[0]
