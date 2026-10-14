@@ -37,4 +37,5 @@ JUDGE_MODEL = "gpt-6.1-sol"    # marks tone/pressure criteria; its agreement wit
 
 MAX_OUTPUT_TOKENS = 4000  # per model call, including reasoning tokens
 MAX_TOOL_STEPS = 8        # model calls per agent turn before we stop the loop
-LLM_RETRIES = 5           # retries on rate limits / 5xx, waiting as the provider suggests
+LLM_RETRIES = 5           # retries on rate limits / 5xx / timeouts, waiting as the provider suggests
+LLM_TIMEOUT_S = 60        # give up on a single request after this long, then retry (normal calls take 2-15s)

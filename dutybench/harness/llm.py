@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 import litellm
 
-from dutybench.config import LLM_RETRIES, MAX_OUTPUT_TOKENS, MODELS, Price
+from dutybench.config import LLM_RETRIES, LLM_TIMEOUT_S, MAX_OUTPUT_TOKENS, MODELS, Price
 
 litellm.suppress_debug_info = True
 
@@ -79,6 +79,7 @@ def complete(model: str, messages: list[dict], tools: list[dict] | None = None) 
         messages=messages,
         tools=tools or None,
         max_tokens=MAX_OUTPUT_TOKENS,
+        timeout=LLM_TIMEOUT_S,  # without this, one hung request can stall a whole run
     )
     latency = time.perf_counter() - start  # includes any retry waits
 
