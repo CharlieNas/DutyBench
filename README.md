@@ -27,4 +27,4 @@ python3 -m venv .venv
 .venv/bin/pytest
 ```
 
-All data in this project is synthetic.
+> **Inspired by FCA rules, not legal advice, fake data only.** Every rule used for grading cites its source, with a note on how confident the reading is. The lender, its customers and all figures are invented.
