@@ -1,5 +1,7 @@
 # DutyBench
 
+[![tests](https://github.com/CharlieNas/DutyBench/actions/workflows/tests.yml/badge.svg)](https://github.com/CharlieNas/DutyBench/actions/workflows/tests.yml)
+
 **Does a customer-support AI agent follow UK consumer-credit rules?**
 
 DutyBench puts a tool-using support agent for a fictional UK lender ("Larkhaven Credit", not a real firm) into multi-turn conversations with simulated customers: someone recently bereaved, someone who has lost their job, someone asking for an unaffordable payment plan, a complaint, a "safe account" scam. It then grades what the agent actually *did* (its tool calls and the lender's backend state), not just what it said, against FCA rules: Consumer Duty, CONC 7 (arrears and forbearance) and complaints handling.
@@ -8,14 +10,17 @@ The agent harness is written from scratch, with no agent frameworks. LiteLLM is 
 
 ## Status: work in progress
 
+DutyBench is a small toolkit for building and testing reliable AI agents. The **core** (agent loop, tools, tracing, simulated customers, evaluation) is general; **settings** plug a domain into it. Lending is the first setting.
+
 - [x] Probe study to choose the domain ([`probes/`](probes/))
-- [x] Agent harness: tool loop, schema-validated tools, JSONL tracing, cost tracking
-- [x] Simulated lender (in-memory backend + 9 tools)
-- [x] Multi-turn scenarios with simulated customers (10 scenarios, from bereavement to a "safe account" scam)
-- [x] Grading: deterministic checks + LLM judge, each tied to a cited rule ([`rules.md`](dutybench/settings/lending/policy/rules.md))
-- [ ] Experiments: baseline vs grounded vs a harness improvement, across models
-- [ ] Web demo
-- [ ] Full write-up with results
+- [x] Core/setting split, pydantic tool schemas, ruff, CI on Python 3.12
+- [ ] Lending setting on a seeded SQLite database, with the full tool set
+- [ ] Response cache, hard cost cap and run records
+- [ ] Replay view for conversation traces
+- [ ] Policy engine: guardrails enforced in code
+- [ ] 40 scenarios, including adversarial ones
+- [ ] One-command evaluation suite and report, with judge vs human agreement
+- [ ] Write-up with results
 
 ## Run the tests
 
