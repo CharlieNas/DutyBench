@@ -8,7 +8,7 @@ against hand grades (agreement.py). The criteria themselves belong to the settin
 
 import json
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from dutybench.config import JUDGE_MODEL
 from dutybench.core import llm
@@ -36,8 +36,10 @@ def build_prompt(conv: Conversation, scenario: dict, criteria: dict[str, dict]) 
     blocks = []
     for cid in criteria_ids:
         c = criteria[cid]
-        blocks.append(f'Criterion "{cid}"\nQuestion: {c["question"]}\n- pass: {c["pass"]}\n'
-                      f'- partial: {c["partial"]}\n- fail: {c["fail"]}')
+        blocks.append(
+            f'Criterion "{cid}"\nQuestion: {c["question"]}\n- pass: {c["pass"]}\n'
+            f"- partial: {c['partial']}\n- fail: {c['fail']}"
+        )
     shape = {cid: {"label": "pass | partial | fail", "reason": "...", "quote": "..."} for cid in criteria_ids}
     user = (
         f"BACKGROUND (known to you, not to the agent at the start)\n{scenario['summary'].strip()}\n"
@@ -60,8 +62,13 @@ def _normalise(s: str) -> str:
     return re.sub(r"[^a-z0-9£ ]", "", " ".join(s.lower().replace("’", "'").replace("'", "").split()))
 
 
-def judge(conv: Conversation, scenario: dict, criteria: dict[str, dict], model: str = JUDGE_MODEL,
-          complete: Callable[..., llm.LLMResult] = llm.complete) -> tuple[list[dict], float]:
+def judge(
+    conv: Conversation,
+    scenario: dict,
+    criteria: dict[str, dict],
+    model: str = JUDGE_MODEL,
+    complete: Callable[..., llm.LLMResult] = llm.complete,
+) -> tuple[list[dict], float]:
     """Mark the scenario's judge criteria (definitions in `criteria`). Returns (results, cost in USD)."""
     criteria_ids = scenario.get("judge", [])
     if not criteria_ids:
@@ -84,11 +91,26 @@ def judge(conv: Conversation, scenario: dict, criteria: dict[str, dict], model: 
     for cid in criteria_ids:
         rule = criteria[cid]["rule"]
         if marks is None:
-            results.append({"id": cid, "rule": rule, "label": "error", "reason": f"judge output unusable: {problem}",
-                            "quote": "", "quote_found": False})
+            results.append(
+                {
+                    "id": cid,
+                    "rule": rule,
+                    "label": "error",
+                    "reason": f"judge output unusable: {problem}",
+                    "quote": "",
+                    "quote_found": False,
+                }
+            )
             continue
         quote = str(marks[cid].get("quote", ""))
-        results.append({"id": cid, "rule": rule, "label": marks[cid]["label"],
-                        "reason": str(marks[cid].get("reason", "")), "quote": quote,
-                        "quote_found": bool(quote) and _normalise(quote) in transcript})
+        results.append(
+            {
+                "id": cid,
+                "rule": rule,
+                "label": marks[cid]["label"],
+                "reason": str(marks[cid].get("reason", "")),
+                "quote": quote,
+                "quote_found": bool(quote) and _normalise(quote) in transcript,
+            }
+        )
     return results, cost

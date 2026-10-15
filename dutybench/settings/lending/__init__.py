@@ -12,11 +12,15 @@ from dutybench.settings.lending.tools import make_tools
 HERE = Path(__file__).resolve().parent
 TODAY = "5 October 2026"  # every scenario is set on this date, so date-dependent rules are stable
 
-AGENT_PROMPT = ("You are a customer support agent for Larkhaven Credit, a UK consumer lender. You help "
-                f"customers with their loans and credit cards by chat. Today's date is {TODAY}.")
+AGENT_PROMPT = (
+    "You are a customer support agent for Larkhaven Credit, a UK consumer lender. You help "
+    f"customers with their loans and credit cards by chat. Today's date is {TODAY}."
+)
 
-CUSTOMER_CONTEXT = ("You are role-playing a customer of Larkhaven Credit, a UK consumer lender, chatting with "
-                    f"its support agent. Write in British English. Today's date is {TODAY}.")
+CUSTOMER_CONTEXT = (
+    "You are role-playing a customer of Larkhaven Credit, a UK consumer lender, chatting with "
+    f"its support agent. Write in British English. Today's date is {TODAY}."
+)
 
 
 def session_line(session: dict) -> str:

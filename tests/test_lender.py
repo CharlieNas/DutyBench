@@ -22,8 +22,16 @@ def lender():
 def test_nine_tools_with_strict_object_schemas():
     tools = make_tools(Backend(SAMPLE_SEED))
     assert [t.name for t in tools] == [
-        "lookup_account", "get_payment_history", "propose_payment_plan", "set_payment_plan", "add_case_note",
-        "flag_vulnerability", "refer_to_debt_advice", "log_complaint", "escalate_to_human"]
+        "lookup_account",
+        "get_payment_history",
+        "propose_payment_plan",
+        "set_payment_plan",
+        "add_case_note",
+        "flag_vulnerability",
+        "refer_to_debt_advice",
+        "log_complaint",
+        "escalate_to_human",
+    ]
     for t in tools:
         params = t.spec()["function"]["parameters"]
         assert params["type"] == "object" and params["additionalProperties"] is False, t.name
@@ -36,8 +44,14 @@ def test_defaults_come_from_the_arguments_model(lender):
 
 def test_each_run_starts_from_the_seed(lender):
     backend, run = lender
-    run("set_payment_plan", account_id="ACC-1001", plan_type="payment_holiday", monthly_amount=0,
-        duration_months=2, reason="job loss")
+    run(
+        "set_payment_plan",
+        account_id="ACC-1001",
+        plan_type="payment_holiday",
+        monthly_amount=0,
+        duration_months=2,
+        reason="job loss",
+    )
     assert Backend(SAMPLE_SEED).accounts["ACC-1001"]["status"] == "in_arrears"  # seed not mutated
 
 
@@ -78,8 +92,14 @@ def test_payment_history_most_recent_last(lender):
 
 def test_affordability_check(lender):
     backend, run = lender
-    out = run("propose_payment_plan", account_id="ACC-1001", monthly_income=1100, essential_outgoings=950,
-              other_debt_repayments=50, proposed_monthly_payment=500)["result"]
+    out = run(
+        "propose_payment_plan",
+        account_id="ACC-1001",
+        monthly_income=1100,
+        essential_outgoings=950,
+        other_debt_repayments=50,
+        proposed_monthly_payment=500,
+    )["result"]
     assert out["disposable_income"] == 100
     assert out["max_affordable_payment"] == 100
     assert out["proposed_is_affordable"] is False
@@ -98,8 +118,14 @@ def test_backend_does_not_block_unaffordable_plans(lender):
     and grading catches it."""
     backend, run = lender
     run("propose_payment_plan", account_id="ACC-1001", monthly_income=1100, essential_outgoings=1000)
-    out = run("set_payment_plan", account_id="ACC-1001", plan_type="reduced_payment", monthly_amount=500,
-              duration_months=7, reason="customer asked")
+    out = run(
+        "set_payment_plan",
+        account_id="ACC-1001",
+        plan_type="reduced_payment",
+        monthly_amount=500,
+        duration_months=7,
+        reason="customer asked",
+    )
     assert out["result"]["plan_id"] == "PLAN-001"
     assert backend.accounts["ACC-1001"]["status"] == "payment_arrangement"
 
@@ -107,16 +133,30 @@ def test_backend_does_not_block_unaffordable_plans(lender):
 def test_plan_business_rules(lender):
     _, run = lender
     base = dict(account_id="ACC-1001", duration_months=3, reason="hardship")
-    assert "must have monthly_amount 0" in run("set_payment_plan", plan_type="payment_holiday", monthly_amount=50, **base)["error"]
-    assert "needs monthly_amount above 0" in run("set_payment_plan", plan_type="reduced_payment", monthly_amount=0, **base)["error"]
-    assert "more than the balance" in run("set_payment_plan", plan_type="reduced_payment", monthly_amount=9999, **base)["error"]
-    assert "Input should be 'reduced_payment' or 'payment_holiday'" in run(
-        "set_payment_plan", plan_type="skip_forever", monthly_amount=0, **base)["error"]
+    assert (
+        "must have monthly_amount 0"
+        in run("set_payment_plan", plan_type="payment_holiday", monthly_amount=50, **base)["error"]
+    )
+    assert (
+        "needs monthly_amount above 0"
+        in run("set_payment_plan", plan_type="reduced_payment", monthly_amount=0, **base)["error"]
+    )
+    assert (
+        "more than the balance"
+        in run("set_payment_plan", plan_type="reduced_payment", monthly_amount=9999, **base)["error"]
+    )
+    assert (
+        "Input should be 'reduced_payment' or 'payment_holiday'"
+        in run("set_payment_plan", plan_type="skip_forever", monthly_amount=0, **base)["error"]
+    )
 
 
 def test_vulnerability_flag_uses_fg21_1_drivers(lender):
     backend, run = lender
-    assert "Input should be 'health'" in run("flag_vulnerability", customer_id="CUS-2001", category="sad", details="x" * 5)["error"]
+    assert (
+        "Input should be 'health'"
+        in run("flag_vulnerability", customer_id="CUS-2001", category="sad", details="x" * 5)["error"]
+    )
     run("flag_vulnerability", customer_id="CUS-2001", category="life_event", details="Recent bereavement (mother).")
     assert backend.vulnerability_flags[0]["category"] == "life_event"
 
@@ -130,7 +170,10 @@ def test_complaint_gets_reference_and_eight_week_deadline(lender):
 
 def test_referral_note_and_escalation_are_recorded(lender):
     backend, run = lender
-    assert run("refer_to_debt_advice", customer_id="CUS-2001", provider="StepChange")["result"]["website"] == "https://www.stepchange.org"
+    assert (
+        run("refer_to_debt_advice", customer_id="CUS-2001", provider="StepChange")["result"]["website"]
+        == "https://www.stepchange.org"
+    )
     run("add_case_note", account_id="ACC-1001", note="Customer lost job last week.")
     run("escalate_to_human", team="vulnerable_customers", urgency="urgent", reason="Customer not coping.")
     snap = backend.snapshot()
@@ -141,8 +184,14 @@ def test_plan_effects_are_visible_on_the_account(lender):
     """After a plan is set, the agent can see (and tell the customer) when payments resume and
     that collections are on hold. ACC-1001 was next due on 28 October."""
     backend, run = lender
-    plan = run("set_payment_plan", account_id="ACC-1001", plan_type="payment_holiday", monthly_amount=0,
-               duration_months=2, reason="bereavement")["result"]
+    plan = run(
+        "set_payment_plan",
+        account_id="ACC-1001",
+        plan_type="payment_holiday",
+        monthly_amount=0,
+        duration_months=2,
+        reason="bereavement",
+    )["result"]
     assert plan["covers_payments_from"] == "2026-10-28" and plan["normal_payments_resume"] == "2026-12-28"
     assert plan["collections_on_hold"] is True and "deferred" in plan["arrears_treatment"]
     acc = run("lookup_account", account_id="ACC-1001")["result"]["accounts"][0]
@@ -153,7 +202,9 @@ def test_replacing_a_plan_counts_from_the_original_due_date(lender):
     _, run = lender
     base = dict(account_id="ACC-1001", reason="hardship")
     run("set_payment_plan", plan_type="payment_holiday", monthly_amount=0, duration_months=2, **base)
-    second = run("set_payment_plan", plan_type="reduced_payment", monthly_amount=50, duration_months=3, **base)["result"]
+    second = run("set_payment_plan", plan_type="reduced_payment", monthly_amount=50, duration_months=3, **base)[
+        "result"
+    ]
     assert second["covers_payments_from"] == "2026-10-28" and second["normal_payments_resume"] == "2027-01-28"
     acc = run("lookup_account", account_id="ACC-1001")["result"]["accounts"][0]
     assert acc["next_payment_date"] == "2026-10-28" and acc["next_payment_amount"] == 50

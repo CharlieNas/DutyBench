@@ -18,8 +18,12 @@ from dutybench.core.agent import Agent
 from dutybench.core.tools import Tool, ToolError
 from dutybench.core.trace import Tracer
 
-KEY_FOR = {"openai/": "OPENAI_API_KEY", "gemini/": "GEMINI_API_KEY", "anthropic/": "ANTHROPIC_API_KEY",
-           "deepseek/": "DEEPSEEK_API_KEY"}
+KEY_FOR = {
+    "openai/": "OPENAI_API_KEY",
+    "gemini/": "GEMINI_API_KEY",
+    "anthropic/": "ANTHROPIC_API_KEY",
+    "deepseek/": "DEEPSEEK_API_KEY",
+}
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -34,8 +38,12 @@ class NextPaymentArgs(BaseModel):
     account_id: str
 
 
-TOOL = Tool(name="get_next_payment", description="Get the date and amount of a loan account's next scheduled payment.",
-            params=NextPaymentArgs, fn=next_payment)
+TOOL = Tool(
+    name="get_next_payment",
+    description="Get the date and amount of a loan account's next scheduled payment.",
+    params=NextPaymentArgs,
+    fn=next_payment,
+)
 
 
 def main():
@@ -46,11 +54,16 @@ def main():
             print(f"\n=== {name}: skipped ({key} not set in .env)")
             continue
         path = ROOT / "traces" / "live_check" / f"{name}.jsonl"
-        agent = Agent(model=name, tools=[TOOL], tracer=Tracer(path),
-                      system_prompt="You are a support agent for a UK lender. Use tools to look things up.")
+        agent = Agent(
+            model=name,
+            tools=[TOOL],
+            tracer=Tracer(path),
+            system_prompt="You are a support agent for a UK lender. Use tools to look things up.",
+        )
         reply = agent.respond("Hi, when's my next payment due and how much is it? Account LN-4471.")
         tools_used = [(e["name"], e["output"]) for e in agent.tracer.events if e["type"] == "tool_call"]
-        print(f"\n=== {name}\ntool calls: {tools_used}\nreply: {reply}\ntotals: {agent.tracer.totals()}\ntrace: {path.relative_to(ROOT)}")
+        print(f"\n=== {name}\ntool calls: {tools_used}\nreply: {reply}")
+        print(f"totals: {agent.tracer.totals()}\ntrace: {path.relative_to(ROOT)}")
         agent.tracer.close()
 
 

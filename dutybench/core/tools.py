@@ -5,8 +5,9 @@ sent to the model, and it validates the arguments the model sends back.
 """
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
@@ -24,8 +25,14 @@ class Tool:
 
     def spec(self) -> dict:
         """The tool definition in the (OpenAI-style) format LiteLLM expects."""
-        return {"type": "function", "function": {
-            "name": self.name, "description": self.description, "parameters": _clean(self.params.model_json_schema())}}
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": _clean(self.params.model_json_schema()),
+            },
+        }
 
 
 def _clean(schema: Any) -> Any:

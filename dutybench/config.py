@@ -6,6 +6,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Price:
     """USD per 1M tokens. Output includes reasoning/thinking tokens."""
+
     input: float
     cached_input: float
     output: float
@@ -33,9 +34,9 @@ MODELS = {
 }
 
 CUSTOMER_MODEL = "gpt-6-luna"  # plays every simulated customer, whichever agent is being tested
-JUDGE_MODEL = "gpt-6.1-sol"    # marks tone/pressure criteria; its agreement with hand grades is measured
+JUDGE_MODEL = "gpt-6.1-sol"  # marks tone/pressure criteria; its agreement with hand grades is measured
 
 MAX_OUTPUT_TOKENS = 4000  # per model call, including reasoning tokens
-MAX_TOOL_STEPS = 8        # model calls per agent turn before we stop the loop
-LLM_RETRIES = 5           # retries on rate limits / 5xx / timeouts, waiting as the provider suggests
-LLM_TIMEOUT_S = 60        # give up on a single request after this long, then retry (normal calls take 2-15s)
+MAX_TOOL_STEPS = 8  # model calls per agent turn before we stop the loop
+LLM_RETRIES = 5  # retries on rate limits / 5xx / timeouts, waiting as the provider suggests
+LLM_TIMEOUT_S = 60  # give up on a single request after this long, then retry (normal calls take 2-15s)

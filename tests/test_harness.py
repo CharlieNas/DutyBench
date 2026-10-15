@@ -25,11 +25,11 @@ BALANCE = Tool(name="get_balance", description="Get an account balance.", params
 
 def make_agent(fake, tmp_path=None, **kw):
     tracer = Tracer(tmp_path / "trace.jsonl" if tmp_path else None)
-    return Agent(model="fake", system_prompt="You are support.", tools=[BALANCE],
-                 tracer=tracer, complete=fake, **kw)
+    return Agent(model="fake", system_prompt="You are support.", tools=[BALANCE], tracer=tracer, complete=fake, **kw)
 
 
 # --- execute(): validation and errors returned to the model -------------------------------
+
 
 def test_execute_valid_call():
     assert execute({"get_balance": BALANCE}, "get_balance", '{"account_id": "ACC-1"}') == {"result": {"balance": 120.5}}
@@ -56,10 +56,13 @@ def test_execute_missing_required():
 
 
 def test_execute_business_error():
-    assert execute({"get_balance": BALANCE}, "get_balance", '{"account_id": "ACC-9"}') == {"error": "No account with id ACC-9."}
+    assert execute({"get_balance": BALANCE}, "get_balance", '{"account_id": "ACC-9"}') == {
+        "error": "No account with id ACC-9."
+    }
 
 
 # --- the loop -----------------------------------------------------------------------------
+
 
 def test_plain_reply_without_tools():
     agent = make_agent(FakeLLM(reply("Hello! How can I help?")))
@@ -81,15 +84,17 @@ def test_tool_call_then_reply(tmp_path):
     types = [e["type"] for e in agent.tracer.events]
     assert types == ["customer_msg", "llm_call", "tool_call", "llm_call", "agent_reply"]
     lines = (tmp_path / "trace.jsonl").read_text().splitlines()
-    assert [json.loads(l)["type"] for l in lines] == types
+    assert [json.loads(line)["type"] for line in lines] == types
     assert agent.tracer.totals()["llm_calls"] == 2
     assert agent.tracer.totals()["cost_usd"] == 0.002
 
 
 def test_model_recovers_from_invalid_arguments():
-    fake = FakeLLM(call("get_balance", {"account_id": "123"}, id="c1"),
-                   call("get_balance", {"account_id": "ACC-1"}, id="c2"),
-                   reply("Your balance is £120.50."))
+    fake = FakeLLM(
+        call("get_balance", {"account_id": "123"}, id="c1"),
+        call("get_balance", {"account_id": "ACC-1"}, id="c2"),
+        reply("Your balance is £120.50."),
+    )
     agent = make_agent(fake)
     assert agent.respond("balance?") == "Your balance is £120.50."
     first_result = [e for e in agent.tracer.events if e["type"] == "tool_call"][0]["output"]
@@ -129,5 +134,9 @@ def test_text_sent_alongside_tool_calls_is_part_of_the_reply():
 
 def test_spec_is_generated_from_the_arguments_model():
     params = BALANCE.spec()["function"]["parameters"]
-    assert params == {"type": "object", "additionalProperties": False, "required": ["account_id"],
-                      "properties": {"account_id": {"type": "string", "pattern": "^ACC-"}}}  # no pydantic "title" noise
+    assert params == {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["account_id"],
+        "properties": {"account_id": {"type": "string", "pattern": "^ACC-"}},
+    }  # no pydantic "title" noise

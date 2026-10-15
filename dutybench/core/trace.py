@@ -3,8 +3,8 @@ step by step (or replayed in the demo) after the fact."""
 
 import json
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 
 class Tracer:

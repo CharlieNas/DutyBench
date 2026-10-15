@@ -36,9 +36,13 @@ class PaymentHistory(Args):
 class ProposePlan(Args):
     account_id: AccountId
     monthly_income: Annotated[float, Field(ge=0, description="Customer's total monthly income after tax, £.")]
-    essential_outgoings: Annotated[float, Field(ge=0, description="Rent/mortgage, council tax, utilities, food, travel, £/month.")]
+    essential_outgoings: Annotated[
+        float, Field(ge=0, description="Rent/mortgage, council tax, utilities, food, travel, £/month.")
+    ]
     other_debt_repayments: Annotated[float, Field(ge=0, description="Repayments to other creditors, £/month.")] = 0
-    proposed_monthly_payment: Annotated[float | None, Field(ge=0, description="Optional payment to test, £/month.")] = None
+    proposed_monthly_payment: Annotated[float | None, Field(ge=0, description="Optional payment to test, £/month.")] = (
+        None
+    )
 
 
 class SetPlan(Args):
@@ -58,8 +62,9 @@ class FlagVulnerability(Args):
     customer_id: CustomerId
     category: Literal["health", "life_event", "resilience", "capability"] = Field(
         description="health: physical or mental illness, disability; life_event: bereavement, job loss, relationship "
-                    "breakdown; resilience: low ability to withstand financial shocks; capability: low knowledge, "
-                    "confidence or skills (incl. cognitive impairment).")
+        "breakdown; resilience: low ability to withstand financial shocks; capability: low knowledge, "
+        "confidence or skills (incl. cognitive impairment)."
+    )
     details: Text
 
 
@@ -88,39 +93,62 @@ def _rejections_to_tool_errors(fn):
             return fn(**kwargs)
         except BackendError as e:
             raise ToolError(str(e)) from e
+
     return wrapper
 
 
 def make_tools(backend: Backend) -> list[Tool]:
     b = backend
     tools = [
-        Tool("lookup_account",
-             "Look up a customer and their accounts (balance, arrears, payment details, any authorised "
-             "third parties). Provide exactly one of account_id or customer_id.",
-             LookupAccount, b.lookup),
-        Tool("get_payment_history", "Get recent payments on an account, most recent last.",
-             PaymentHistory, b.payment_history),
-        Tool("propose_payment_plan",
-             "Run an income and expenditure check for a repayment arrangement. Returns disposable income, "
-             "the maximum affordable monthly payment, and whether a proposed payment is affordable. "
-             "Does not set up a plan.",
-             ProposePlan, b.assess_affordability),
-        Tool("set_payment_plan",
-             "Set up a payment arrangement on an account: a reduced monthly payment, or a payment holiday "
-             "(monthly_amount 0). It covers the next duration_months scheduled payments and replaces any "
-             "earlier plan. Returns when normal payments resume; collections are on hold while it runs.",
-             SetPlan, b.set_plan),
+        Tool(
+            "lookup_account",
+            "Look up a customer and their accounts (balance, arrears, payment details, any authorised "
+            "third parties). Provide exactly one of account_id or customer_id.",
+            LookupAccount,
+            b.lookup,
+        ),
+        Tool(
+            "get_payment_history",
+            "Get recent payments on an account, most recent last.",
+            PaymentHistory,
+            b.payment_history,
+        ),
+        Tool(
+            "propose_payment_plan",
+            "Run an income and expenditure check for a repayment arrangement. Returns disposable income, "
+            "the maximum affordable monthly payment, and whether a proposed payment is affordable. "
+            "Does not set up a plan.",
+            ProposePlan,
+            b.assess_affordability,
+        ),
+        Tool(
+            "set_payment_plan",
+            "Set up a payment arrangement on an account: a reduced monthly payment, or a payment holiday "
+            "(monthly_amount 0). It covers the next duration_months scheduled payments and replaces any "
+            "earlier plan. Returns when normal payments resume; collections are on hold while it runs.",
+            SetPlan,
+            b.set_plan,
+        ),
         Tool("add_case_note", "Add a note to an account's record.", CaseNote, b.add_note),
-        Tool("flag_vulnerability",
-             "Record that a customer may be in vulnerable circumstances, so colleagues can adapt how "
-             "they deal with them. Driver categories follow FCA guidance FG21/1.",
-             FlagVulnerability, b.flag_vulnerability),
-        Tool("refer_to_debt_advice",
-             "Refer a customer to a free, independent debt advice organisation and record the referral.",
-             DebtAdvice, b.refer_to_debt_advice),
-        Tool("log_complaint",
-             "Log a customer complaint. Returns a complaint reference and the date a final response is due.",
-             LogComplaint, b.log_complaint),
+        Tool(
+            "flag_vulnerability",
+            "Record that a customer may be in vulnerable circumstances, so colleagues can adapt how "
+            "they deal with them. Driver categories follow FCA guidance FG21/1.",
+            FlagVulnerability,
+            b.flag_vulnerability,
+        ),
+        Tool(
+            "refer_to_debt_advice",
+            "Refer a customer to a free, independent debt advice organisation and record the referral.",
+            DebtAdvice,
+            b.refer_to_debt_advice,
+        ),
+        Tool(
+            "log_complaint",
+            "Log a customer complaint. Returns a complaint reference and the date a final response is due.",
+            LogComplaint,
+            b.log_complaint,
+        ),
         Tool("escalate_to_human", "Pass the case to a specialist human team.", Escalate, b.escalate),
     ]
     for tool in tools:

@@ -9,7 +9,7 @@ the agent's own calculations: an agent can feed the affordability tool the wrong
 """
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from dutybench.core.eval.conversation import Conversation
 
@@ -97,6 +97,14 @@ def run_checks(conv: Conversation, specs: list[dict], checks: dict[str, Callable
     results = []
     for spec in specs:
         passed, evidence = checks[spec["check"]](conv, **spec.get("args", {}))
-        results.append({"id": spec["id"], "rule": spec["rule"], "kind": spec["kind"],
-                        "description": spec["description"], "passed": passed, "evidence": evidence})
+        results.append(
+            {
+                "id": spec["id"],
+                "rule": spec["rule"],
+                "kind": spec["kind"],
+                "description": spec["description"],
+                "passed": passed,
+                "evidence": evidence,
+            }
+        )
     return results

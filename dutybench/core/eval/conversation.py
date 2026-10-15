@@ -47,9 +47,11 @@ class Conversation:
 
     def calls(self, name: str, where: dict | None = None, ok_only: bool = True) -> list[ToolCall]:
         """Tool calls to `name` whose arguments include everything in `where`."""
-        return [c for c in self.tool_calls
-                if c.name == name and (c.ok or not ok_only)
-                and all(c.args.get(k) == v for k, v in (where or {}).items())]
+        return [
+            c
+            for c in self.tool_calls
+            if c.name == name and (c.ok or not ok_only) and all(c.args.get(k) == v for k, v in (where or {}).items())
+        ]
 
     def transcript(self, with_tools: bool = False) -> str:
         lines, by_turn = [], {}
@@ -62,8 +64,11 @@ class Conversation:
                 lines.append(f"CUSTOMER (message {n}): {t['text']}")
             else:
                 if with_tools:
-                    lines += [f"  [agent action: {c.name}({json.dumps(c.args, ensure_ascii=False)})"
-                              f"{'' if c.ok else ' -> ERROR'}]" for c in by_turn.get(n, [])]
+                    lines += [
+                        f"  [agent action: {c.name}({json.dumps(c.args, ensure_ascii=False)})"
+                        f"{'' if c.ok else ' -> ERROR'}]"
+                        for c in by_turn.get(n, [])
+                    ]
                 lines.append(f"AGENT: {t['text']}")
         return "\n\n".join(lines)
 
@@ -71,10 +76,16 @@ class Conversation:
     def from_events(cls, events: list[dict]) -> "Conversation":
         start = next(e for e in events if e["type"] == "episode_start")
         end = next((e for e in events if e["type"] == "episode_end"), {})
-        conv = cls(start["scenario_id"], start["model"], start["condition"], start["run"],
-                   end.get("status", "incomplete"), setting=start.get("setting", "lending"),
-                   final_state=end.get("final_state", {}),
-                   totals=end.get("totals", {}))
+        conv = cls(
+            start["scenario_id"],
+            start["model"],
+            start["condition"],
+            start["run"],
+            end.get("status", "incomplete"),
+            setting=start.get("setting", "lending"),
+            final_state=end.get("final_state", {}),
+            totals=end.get("totals", {}),
+        )
         turn = 0
         for e in events:
             if e["type"] == "customer_msg":

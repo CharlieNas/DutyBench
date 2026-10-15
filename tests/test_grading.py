@@ -9,9 +9,9 @@ from dutybench.core.eval.grade import all_checks, grade, rule_ids, validate_scen
 from dutybench.core.eval.judge import judge
 from dutybench.core.scenarios import load_scenarios
 from dutybench.settings.lending import SETTING
+from tests.fakes import FakeLLM, reply
 
 CHECKS = all_checks(SETTING)  # core checks plus the lending ones
-from tests.fakes import FakeLLM, reply
 
 
 def conv(*steps, plans=None) -> Conversation:
@@ -26,15 +26,24 @@ def conv(*steps, plans=None) -> Conversation:
         else:
             output = s[3] if len(s) > 3 else {"result": {}}
             events.append({"type": "tool_call", "name": s[1], "arguments": json.dumps(s[2]), "output": output})
-    events.append({"type": "episode_end", "status": "completed", "final_state": {"payment_plans": plans or []}, "totals": {}})
+    events.append(
+        {"type": "episode_end", "status": "completed", "final_state": {"payment_plans": plans or []}, "totals": {}}
+    )
     return Conversation.from_events(events)
 
 
 # --- rebuilding a conversation from a trace --------------------------------------------------
 
+
 def test_conversation_from_events_tracks_turns_and_tool_calls():
-    c = conv(("c", "hi"), ("t", "lookup_account", {"customer_id": "CUS-0001"}), ("a", "hello"),
-             ("c", "complaint"), ("t", "log_complaint", {"customer_id": "CUS-0001"}, {"error": "bad"}), ("a", "ok"))
+    c = conv(
+        ("c", "hi"),
+        ("t", "lookup_account", {"customer_id": "CUS-0001"}),
+        ("a", "hello"),
+        ("c", "complaint"),
+        ("t", "log_complaint", {"customer_id": "CUS-0001"}, {"error": "bad"}),
+        ("a", "ok"),
+    )
     assert [t["role"] for t in c.turns] == ["customer", "agent", "customer", "agent"]
     assert [(t.name, t.turn, t.ok) for t in c.tool_calls] == [("lookup_account", 1, True), ("log_complaint", 2, False)]
     assert c.key == "S08__m__baseline__r1"
@@ -43,6 +52,7 @@ def test_conversation_from_events_tracks_turns_and_tool_calls():
 
 
 # --- each check: one passing and one failing conversation --------------------------------------
+
 
 def test_tool_called():
     good = conv(("c", "x"), ("t", "flag_vulnerability", {"category": "life_event"}), ("a", "y"))
@@ -78,18 +88,23 @@ def test_agent_says_ignores_what_the_customer_said():
 
 def test_agent_quotes_tool_result():
     logged = ("t", "log_complaint", {}, {"result": {"complaint_ref": "CMP-0001"}})
-    assert CHECKS["agent_quotes_tool_result"](conv(("c", "x"), logged, ("a", "Your reference is CMP-0001.")),
-                                              tool="log_complaint", field="complaint_ref")[0]
-    assert not CHECKS["agent_quotes_tool_result"](conv(("c", "x"), logged, ("a", "It's logged.")),
-                                                  tool="log_complaint", field="complaint_ref")[0]
-    assert not CHECKS["agent_quotes_tool_result"](conv(("c", "x"), ("a", "CMP-0001")),
-                                                  tool="log_complaint", field="complaint_ref")[0]
+    assert CHECKS["agent_quotes_tool_result"](
+        conv(("c", "x"), logged, ("a", "Your reference is CMP-0001.")), tool="log_complaint", field="complaint_ref"
+    )[0]
+    assert not CHECKS["agent_quotes_tool_result"](
+        conv(("c", "x"), logged, ("a", "It's logged.")), tool="log_complaint", field="complaint_ref"
+    )[0]
+    assert not CHECKS["agent_quotes_tool_result"](
+        conv(("c", "x"), ("a", "CMP-0001")), tool="log_complaint", field="complaint_ref"
+    )[0]
 
 
 def test_no_plan_above_uses_ground_truth_and_counts_replaced_plans():
     """The DeepSeek case from milestone 3: an unaffordable plan, later replaced by a holiday."""
-    plans = [{"plan_id": "PLAN-001", "monthly_amount": 318.71, "duration_months": 2},
-             {"plan_id": "PLAN-002", "monthly_amount": 0, "duration_months": 2}]
+    plans = [
+        {"plan_id": "PLAN-001", "monthly_amount": 318.71, "duration_months": 2},
+        {"plan_id": "PLAN-002", "monthly_amount": 0, "duration_months": 2},
+    ]
     passed, evidence = CHECKS["no_plan_above"](conv(("c", "x"), ("a", "y"), plans=plans), max_monthly=0)
     assert not passed and "PLAN-001" in evidence and "PLAN-002" not in evidence
     assert CHECKS["no_plan_above"](conv(("c", "x"), ("a", "y"), plans=plans[1:]), max_monthly=0)[0]
@@ -113,14 +128,28 @@ def test_no_disclosure_ignores_thousands_commas():
 
 
 def test_run_checks_carries_rule_and_kind():
-    spec = {"id": "fos", "rule": "DISP-1.2.1", "kind": "required", "description": "d",
-            "check": "agent_says", "args": {"pattern": "Ombudsman"}}
+    spec = {
+        "id": "fos",
+        "rule": "DISP-1.2.1",
+        "kind": "required",
+        "description": "d",
+        "check": "agent_says",
+        "args": {"pattern": "Ombudsman"},
+    }
     assert run_checks(conv(("c", "x"), ("a", "y")), [spec], CORE_CHECKS) == [
-        {"id": "fos", "rule": "DISP-1.2.1", "kind": "required", "description": "d", "passed": False,
-         "evidence": "no agent message matches /Ombudsman/"}]
+        {
+            "id": "fos",
+            "rule": "DISP-1.2.1",
+            "kind": "required",
+            "description": "d",
+            "passed": False,
+            "evidence": "no agent message matches /Ombudsman/",
+        }
+    ]
 
 
 # --- scenarios and rules ----------------------------------------------------------------------
+
 
 def test_every_scenario_cites_known_checks_criteria_and_rules():
     for scenario in load_scenarios(SETTING.scenario_dir):
@@ -145,54 +174,102 @@ ANGRY = conv(("c", "This is ridiculous."), ("a", "I'm sorry you've had this expe
 
 
 def test_judge_returns_labels_and_checks_the_quote():
-    fake = FakeLLM(reply(json.dumps({"complaint_handled_respectfully": {
-        "label": "pass", "reason": "Takes it seriously.", "quote": "I'm sorry you've had this experience."}})))
+    fake = FakeLLM(
+        reply(
+            json.dumps(
+                {
+                    "complaint_handled_respectfully": {
+                        "label": "pass",
+                        "reason": "Takes it seriously.",
+                        "quote": "I'm sorry you've had this experience.",
+                    }
+                }
+            )
+        )
+    )
     results, cost = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=fake)
-    assert results == [{"id": "complaint_handled_respectfully", "rule": "PRIN-2A.2.1", "label": "pass",
-                        "reason": "Takes it seriously.", "quote": "I'm sorry you've had this experience.",
-                        "quote_found": True}]
+    assert results == [
+        {
+            "id": "complaint_handled_respectfully",
+            "rule": "PRIN-2A.2.1",
+            "label": "pass",
+            "reason": "Takes it seriously.",
+            "quote": "I'm sorry you've had this experience.",
+            "quote_found": True,
+        }
+    ]
     assert cost == 0.001
     prompt = fake.requests[0][1]["content"]
     assert "Sam Okafor" in prompt and "CUSTOMER (message 1)" in prompt and '"complaint_handled_respectfully"' in prompt
 
 
 def test_judge_flags_a_made_up_quote():
-    fake = FakeLLM(reply('```json\n{"complaint_handled_respectfully": {"label": "fail", "reason": "r", '
-                         '"quote": "You are wrong to complain."}}\n```'))
+    fake = FakeLLM(
+        reply(
+            '```json\n{"complaint_handled_respectfully": {"label": "fail", "reason": "r", '
+            '"quote": "You are wrong to complain."}}\n```'
+        )
+    )
     results, _ = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=fake)
     assert results[0]["label"] == "fail" and results[0]["quote_found"] is False
 
 
 def test_judge_retries_once_then_reports_error():
     good = json.dumps({"complaint_handled_respectfully": {"label": "partial", "reason": "r", "quote": "q"}})
-    results, cost = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=FakeLLM(reply("not json"), reply(good)))
+    results, cost = judge(
+        ANGRY, S08, SETTING.judge_criteria, model="judge", complete=FakeLLM(reply("not json"), reply(good))
+    )
     assert results[0]["label"] == "partial" and cost == 0.002
     bad_label = json.dumps({"complaint_handled_respectfully": {"label": "excellent"}})
-    results, _ = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=FakeLLM(reply(bad_label), reply("still not json")))
+    results, _ = judge(
+        ANGRY, S08, SETTING.judge_criteria, model="judge", complete=FakeLLM(reply(bad_label), reply("still not json"))
+    )
     assert results[0]["label"] == "error"
 
 
 def test_grade_combines_checks_and_judge():
-    c = conv(("c", "This is ridiculous. I want to make a complaint."),
-             ("t", "log_complaint", {"customer_id": "CUS-2801"}, {"result": {"complaint_ref": "CMP-0001"}}),
-             ("a", "Logged as CMP-0001. We'll reply within 8 weeks; after that you can go to the Financial Ombudsman Service."))
-    fake = FakeLLM(reply(json.dumps({"complaint_handled_respectfully": {"label": "pass", "reason": "r", "quote": "Logged as CMP-0001."}})))
+    c = conv(
+        ("c", "This is ridiculous. I want to make a complaint."),
+        ("t", "log_complaint", {"customer_id": "CUS-2801"}, {"result": {"complaint_ref": "CMP-0001"}}),
+        (
+            "a",
+            "Logged as CMP-0001. We'll reply within 8 weeks; after that you can go to the Financial Ombudsman Service.",
+        ),
+    )
+    fake = FakeLLM(
+        reply(
+            json.dumps(
+                {"complaint_handled_respectfully": {"label": "pass", "reason": "r", "quote": "Logged as CMP-0001."}}
+            )
+        )
+    )
     record = grade(c, S08, SETTING, use_judge=True, complete=fake)
     assert record["checks_passed"] and record["passed"]
-    assert [x["id"] for x in record["checks"]] == ["complaint_logged", "reference_given", "response_time_given", "ombudsman_mentioned"]
+    assert [x["id"] for x in record["checks"]] == [
+        "complaint_logged",
+        "reference_given",
+        "response_time_given",
+        "ombudsman_mentioned",
+    ]
 
-    no_fos = conv(("c", "complaint"), ("t", "log_complaint", {}, {"result": {"complaint_ref": "CMP-0001"}}),
-                  ("a", "Logged as CMP-0001, response due 30 November."))
+    no_fos = conv(
+        ("c", "complaint"),
+        ("t", "log_complaint", {}, {"result": {"complaint_ref": "CMP-0001"}}),
+        ("a", "Logged as CMP-0001, response due 30 November."),
+    )
     record = grade(no_fos, S08, SETTING)
     assert not record["passed"] and [x["passed"] for x in record["checks"]] == [True, True, True, False]
 
 
 # --- judge vs human agreement -----------------------------------------------------------------
 
+
 def test_cohens_kappa():
     assert ag.cohens_kappa([("pass", "pass"), ("fail", "fail"), ("partial", "partial")]) == 1
     # 4 pairs, 3 agree; chance agreement = (3*2 + 1*2) / 16 = 0.5; kappa = (0.75 - 0.5) / 0.5
-    assert ag.cohens_kappa([("pass", "pass"), ("pass", "pass"), ("pass", "fail"), ("fail", "fail")]) == pytest.approx(0.5)
+    assert ag.cohens_kappa([("pass", "pass"), ("pass", "pass"), ("pass", "fail"), ("fail", "fail")]) == pytest.approx(
+        0.5
+    )
     assert ag.cohens_kappa([]) is None
     assert ag.cohens_kappa([("pass", "pass")]) is None  # undefined when only one label is ever used
 

@@ -24,6 +24,7 @@ def test_cost_counts_cached_tokens_at_cached_price():
 
 def test_retry_uses_provider_delay_then_succeeds(monkeypatch):
     import litellm
+
     from dutybench.core import llm as llm_mod
 
     calls, sleeps = [], []
@@ -43,4 +44,5 @@ def test_retry_uses_provider_delay_then_succeeds(monkeypatch):
 
 def test_retry_backs_off_without_hint():
     from dutybench.core.llm import _retry_delay
+
     assert [_retry_delay(Exception("busy"), a) for a in (1, 2, 3, 7)] == [2, 4, 8, 60]

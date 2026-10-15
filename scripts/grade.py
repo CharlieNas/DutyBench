@@ -48,7 +48,9 @@ def main():
         print(f"  {'model':16} {'condition':9} " + " ".join(f"{c[:22]:22}" for c in columns) + " overall")
         for r in sorted(rows, key=lambda r: (r["model"], r["condition"], r["run"])):
             cells = [MARK[c["passed"]] for c in r["checks"]] + [j["label"] for j in r["judge"]]
-            print(f"  {r['model']:16} {r['condition']:9} " + " ".join(f"{c:22}" for c in cells) + f" {MARK[r['passed']]}")
+            print(
+                f"  {r['model']:16} {r['condition']:9} " + " ".join(f"{c:22}" for c in cells) + f" {MARK[r['passed']]}"
+            )
             if args.details:
                 for c in r["checks"]:
                     print(f"      {MARK[c['passed']]} {c['id']} [{c['rule']}]: {c['evidence'][:200]}")
@@ -59,8 +61,10 @@ def main():
     out = ROOT / "results" / f"grades_{args.folder.name}.jsonl"
     out.parent.mkdir(exist_ok=True)
     out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records))
-    print(f"\n{len(records)} conversations graded -> {out.relative_to(ROOT)}"
-          + (f"   judge cost ${judge_cost:.4f}" if args.judge else ""))
+    print(
+        f"\n{len(records)} conversations graded -> {out.relative_to(ROOT)}"
+        + (f"   judge cost ${judge_cost:.4f}" if args.judge else "")
+    )
 
 
 if __name__ == "__main__":

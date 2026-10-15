@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=9.1"]
+dev = ["pytest>=9.1", "ruff>=0.14"]
 
 [build-system]
 requires = ["setuptools>=75"]
@@ -22,3 +22,12 @@ include = ["dutybench*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["probes"]  # the original one-evening probe script, kept as it was
+
+[tool.ruff.lint]
+# pycodestyle errors, pyflakes, import order, modern syntax, likely bugs
+select = ["E", "F", "I", "UP", "B"]

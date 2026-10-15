@@ -5,8 +5,8 @@ The customer model sees the conversation from the customer's side: the agent's m
 The opening message is fixed in the scenario, so every run starts identically.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from dutybench.core import llm
 from dutybench.core.trace import Tracer
@@ -46,8 +46,13 @@ class SimulatedCustomer:
 
     def __post_init__(self):
         c = self.scenario["customer"]
-        self.system = PROMPT.format(context=self.context.strip(), persona=c["persona"].strip(), reveal=c["reveal"].strip(),
-                                    goal=c["goal"].strip(), end=END)
+        self.system = PROMPT.format(
+            context=self.context.strip(),
+            persona=c["persona"].strip(),
+            reveal=c["reveal"].strip(),
+            goal=c["goal"].strip(),
+            end=END,
+        )
 
     def opening(self) -> str:
         return self.scenario["customer"]["opening_message"]
@@ -58,13 +63,23 @@ class SimulatedCustomer:
         for turn in transcript:
             messages.append({"role": "assistant" if turn["role"] == "customer" else "user", "content": turn["text"]})
         # Reveal rules like "in your third message" need the customer to know where it is.
-        messages[-1]["content"] += (f"\n\n(Stage direction, not from the agent: you are writing message "
-                                    f"{message_number} of at most {max_messages}.)")
+        messages[-1]["content"] += (
+            f"\n\n(Stage direction, not from the agent: you are writing message "
+            f"{message_number} of at most {max_messages}.)"
+        )
 
         result = self.complete(self.model, messages)
-        self.tracer.log("llm_call", role="customer", model=self.model, text=result.text, tool_calls=[],
-                        usage=vars(result.usage), latency_s=round(result.latency_s, 3),
-                        cost_usd=result.cost_usd, finish_reason=result.finish_reason)
+        self.tracer.log(
+            "llm_call",
+            role="customer",
+            model=self.model,
+            text=result.text,
+            tool_calls=[],
+            usage=vars(result.usage),
+            latency_s=round(result.latency_s, 3),
+            cost_usd=result.cost_usd,
+            finish_reason=result.finish_reason,
+        )
         text = result.text.strip()
         wants_to_end = END in text
         return text.replace(END, "").strip(), wants_to_end

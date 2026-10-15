@@ -22,7 +22,9 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def show(event: dict):
-    wrap = lambda s: textwrap.indent(textwrap.fill(s, 110, replace_whitespace=False), "    ")
+    def wrap(s):
+        return textwrap.indent(textwrap.fill(s, 110, replace_whitespace=False), "    ")
+
     if event["type"] == "customer_msg":
         print(f"\n  CUSTOMER:\n{wrap(event['text'])}")
     elif event["type"] == "tool_call":
@@ -49,13 +51,17 @@ def main():
         for model in args.models:
             for condition in args.conditions:
                 print(f"\n{'=' * 100}\n{scenario['id']} {scenario['title']} | {model} | {condition}")
-                ep = run_episode(setting, scenario, model, condition, trace_dir=ROOT / "traces" / args.out, on_event=show)
+                ep = run_episode(
+                    setting, scenario, model, condition, trace_dir=ROOT / "traces" / args.out, on_event=show
+                )
                 cost = ep.totals["agent"]["cost_usd"] + ep.totals["customer"]["cost_usd"]
                 total += cost
-                print(f"\n  [{ep.status}{': ' + ep.error if ep.error else ''}] "
-                      f"{len(ep.transcript) // 2} customer messages, agent ${ep.totals['agent']['cost_usd']:.4f}, "
-                      f"customer ${ep.totals['customer']['cost_usd']:.4f}, "
-                      f"agent model time {ep.totals['agent']['llm_latency_s']:.0f}s")
+                print(
+                    f"\n  [{ep.status}{': ' + ep.error if ep.error else ''}] "
+                    f"{len(ep.transcript) // 2} customer messages, agent ${ep.totals['agent']['cost_usd']:.4f}, "
+                    f"customer ${ep.totals['customer']['cost_usd']:.4f}, "
+                    f"agent model time {ep.totals['agent']['llm_latency_s']:.0f}s"
+                )
                 created = {k: v for k, v in ep.final_state.items() if isinstance(v, list) and v}
                 print(f"  backend records created: {json.dumps(created)}")
     print(f"\nTotal cost: ${total:.4f}")

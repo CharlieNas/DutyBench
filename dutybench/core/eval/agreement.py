@@ -30,8 +30,14 @@ def cohens_kappa(pairs: list[tuple[str, str]]) -> float | None:
     return None if expected == 1 else (observed - expected) / (1 - expected)
 
 
-def export_for_hand_grading(grades: list[dict], conversations: dict[str, Conversation], criteria: dict[str, dict],
-                            out_dir: Path, n: int = 20, seed: int = 0) -> Path:
+def export_for_hand_grading(
+    grades: list[dict],
+    conversations: dict[str, Conversation],
+    criteria: dict[str, dict],
+    out_dir: Path,
+    n: int = 20,
+    seed: int = 0,
+) -> Path:
     """Sample up to n judged conversations and write the blind hand-grading pack."""
     judged = [g for g in grades if g["judge"]]
     sample = random.Random(seed).sample(judged, min(n, len(judged)))
@@ -43,9 +49,17 @@ def export_for_hand_grading(grades: list[dict], conversations: dict[str, Convers
         pages.append(f"# {cid}\n\n{conversations[g['key']].transcript(with_tools=True)}\n")
         for j in g["judge"]:
             c = criteria[j["id"]]
-            rows.append({"conversation": cid, "criterion": j["id"], "question": c["question"],
-                         "pass_means": c["pass"], "partial_means": c["partial"], "fail_means": c["fail"],
-                         "human_label": ""})
+            rows.append(
+                {
+                    "conversation": cid,
+                    "criterion": j["id"],
+                    "question": c["question"],
+                    "pass_means": c["pass"],
+                    "partial_means": c["partial"],
+                    "fail_means": c["fail"],
+                    "human_label": "",
+                }
+            )
     (out_dir / "transcripts.md").write_text("\n---\n\n".join(pages))
     (out_dir / "key.json").write_text(json.dumps(key, indent=1))  # do not open until grading is done
     with (out_dir / "labels.csv").open("w", newline="") as f:
@@ -69,8 +83,11 @@ def agreement(labels_csv: Path, key_json: Path, grades: list[dict]) -> dict:
             if judge_label in LABELS:
                 pairs[row["criterion"]].append((human, judge_label))
     report = {}
-    for name, ps in {**pairs, "overall": [p for ps in pairs.values() for p in ps]}.items():
-        report[name] = {"n": len(ps),
-                        "agreement": round(sum(a == b for a, b in ps) / len(ps), 3) if ps else None,
-                        "kappa": None if (k := cohens_kappa(ps)) is None else round(k, 3)}
+    everything = [pair for criterion_pairs in pairs.values() for pair in criterion_pairs]
+    for name, ps in {**pairs, "overall": everything}.items():
+        report[name] = {
+            "n": len(ps),
+            "agreement": round(sum(a == b for a, b in ps) / len(ps), 3) if ps else None,
+            "kappa": None if (k := cohens_kappa(ps)) is None else round(k, 3),
+        }
     return report

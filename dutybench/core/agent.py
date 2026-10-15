@@ -17,16 +17,18 @@ messages one at a time. `complete` is injectable so tests can script the model's
 """
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from dutybench.config import MAX_TOOL_STEPS
 from dutybench.core import llm
 from dutybench.core.tools import Tool, execute
 from dutybench.core.trace import Tracer
 
-STEP_LIMIT_REPLY = ("I'm sorry, I wasn't able to complete that just now. "
-                    "I'm passing your conversation to a colleague who will follow up with you.")
+STEP_LIMIT_REPLY = (
+    "I'm sorry, I wasn't able to complete that just now. "
+    "I'm passing your conversation to a colleague who will follow up with you."
+)
 
 
 def build_system_message(system_prompt: str, policy_doc: str | None = None) -> dict:
@@ -66,11 +68,17 @@ class Agent:
             result = self.complete(self.model, self.messages, self._specs)
             self.messages.append(result.message)
             self.tracer.log(
-                "llm_call", role="agent", model=self.model, step=step,
-                n_messages=len(self.messages) - 1, text=result.text,
+                "llm_call",
+                role="agent",
+                model=self.model,
+                step=step,
+                n_messages=len(self.messages) - 1,
+                text=result.text,
                 tool_calls=[{"id": c.id, "name": c.name, "arguments": c.arguments} for c in result.tool_calls],
-                usage=vars(result.usage), latency_s=round(result.latency_s, 3),
-                cost_usd=result.cost_usd, finish_reason=result.finish_reason,
+                usage=vars(result.usage),
+                latency_s=round(result.latency_s, 3),
+                cost_usd=result.cost_usd,
+                finish_reason=result.finish_reason,
             )
 
             if result.text.strip():
@@ -82,10 +90,10 @@ class Agent:
 
             for call in result.tool_calls:
                 output = execute(self._tools, call.name, call.arguments)
-                self.tracer.log("tool_call", id=call.id, name=call.name,
-                                arguments=call.arguments, output=output)
-                self.messages.append({"role": "tool", "tool_call_id": call.id,
-                                      "content": json.dumps(output, default=str)})
+                self.tracer.log("tool_call", id=call.id, name=call.name, arguments=call.arguments, output=output)
+                self.messages.append(
+                    {"role": "tool", "tool_call_id": call.id, "content": json.dumps(output, default=str)}
+                )
 
         # The model kept calling tools without ever answering: stop, hand over, and record it.
         self.tracer.log("step_limit", max_steps=self.max_steps)

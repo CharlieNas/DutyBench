@@ -7,9 +7,9 @@ API failures (outages, quota) mark the episode as "error" so it can be re-run; t
 counted as the agent failing. Bugs in our own code are not caught and stop the run.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import openai
 
@@ -37,22 +37,42 @@ class Episode:
     error: str | None = None
 
 
-def run_episode(setting: Setting, scenario: dict, model: str, condition: str = "baseline", run: int = 1,
-                trace_dir: Path | None = None, customer_model: str = CUSTOMER_MODEL,
-                complete: Callable[..., llm.LLMResult] = llm.complete,
-                on_event: Callable[[dict], None] | None = None) -> Episode:
+def run_episode(
+    setting: Setting,
+    scenario: dict,
+    model: str,
+    condition: str = "baseline",
+    run: int = 1,
+    trace_dir: Path | None = None,
+    customer_model: str = CUSTOMER_MODEL,
+    complete: Callable[..., llm.LLMResult] = llm.complete,
+    on_event: Callable[[dict], None] | None = None,
+) -> Episode:
     if condition not in CONDITIONS:
         raise ValueError(f"Unknown condition {condition!r}; expected one of {CONDITIONS}")
 
     trace_path = trace_dir / f"{scenario['id']}__{model}__{condition}__r{run}.jsonl" if trace_dir else None
     tracer = Tracer(trace_path, on_event=on_event)
     backend = setting.make_backend(scenario["seed"])
-    agent = Agent(model=model, tools=setting.make_tools(backend), tracer=tracer, complete=complete,
-                  system_prompt=setting.agent_prompt + " " + setting.session_line(scenario["session"]),
-                  policy_doc=setting.policy_doc if condition == "grounded" else None)
+    agent = Agent(
+        model=model,
+        tools=setting.make_tools(backend),
+        tracer=tracer,
+        complete=complete,
+        system_prompt=setting.agent_prompt + " " + setting.session_line(scenario["session"]),
+        policy_doc=setting.policy_doc if condition == "grounded" else None,
+    )
     customer = SimulatedCustomer(scenario, setting.customer_context, customer_model, tracer, complete=complete)
-    tracer.log("episode_start", setting=setting.name, scenario_id=scenario["id"], model=model, condition=condition,
-               run=run, customer_model=customer_model, system_prompt=agent.messages[0]["content"])
+    tracer.log(
+        "episode_start",
+        setting=setting.name,
+        scenario_id=scenario["id"],
+        model=model,
+        condition=condition,
+        run=run,
+        customer_model=customer_model,
+        system_prompt=agent.messages[0]["content"],
+    )
 
     transcript: list[dict] = []
     status, error = "max_turns", None
@@ -75,5 +95,15 @@ def run_episode(setting: Setting, scenario: dict, model: str, condition: str = "
     totals = {"agent": tracer.totals("agent"), "customer": tracer.totals("customer")}
     tracer.log("episode_end", status=status, error=error, final_state=final_state, totals=totals)
     tracer.close()
-    return Episode(scenario["id"], model, condition, run, status, transcript, final_state, totals,
-                   str(trace_path) if trace_path else None, error)
+    return Episode(
+        scenario["id"],
+        model,
+        condition,
+        run,
+        status,
+        transcript,
+        final_state,
+        totals,
+        str(trace_path) if trace_path else None,
+        error,
+    )

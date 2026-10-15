@@ -6,16 +6,18 @@ from dutybench.core.llm import LLMResult, ToolCall, Usage
 
 
 def reply(text: str) -> LLMResult:
-    return LLMResult(message={"role": "assistant", "content": text}, text=text,
-                     usage=Usage(100, 0, 20), cost_usd=0.001)
+    return LLMResult(message={"role": "assistant", "content": text}, text=text, usage=Usage(100, 0, 20), cost_usd=0.001)
 
 
 def call(name: str, arguments: dict | str, id: str = "call_1") -> LLMResult:
     raw = arguments if isinstance(arguments, str) else json.dumps(arguments)
-    message = {"role": "assistant", "tool_calls": [
-        {"id": id, "type": "function", "function": {"name": name, "arguments": raw}}]}
-    return LLMResult(message=message, text="", tool_calls=[ToolCall(id, name, raw)],
-                     usage=Usage(100, 0, 20), cost_usd=0.001)
+    message = {
+        "role": "assistant",
+        "tool_calls": [{"id": id, "type": "function", "function": {"name": name, "arguments": raw}}],
+    }
+    return LLMResult(
+        message=message, text="", tool_calls=[ToolCall(id, name, raw)], usage=Usage(100, 0, 20), cost_usd=0.001
+    )
 
 
 class FakeLLM:

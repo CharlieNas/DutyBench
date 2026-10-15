@@ -43,18 +43,24 @@ class LLMResult:
 
 def cost_usd(price: Price, usage: Usage) -> float:
     uncached = usage.input_tokens - usage.cached_tokens
-    return (uncached * price.input + usage.cached_tokens * price.cached_input
-            + usage.output_tokens * price.output) / 1e6
+    return (
+        uncached * price.input + usage.cached_tokens * price.cached_input + usage.output_tokens * price.output
+    ) / 1e6
 
 
-RETRYABLE = (litellm.RateLimitError, litellm.ServiceUnavailableError, litellm.InternalServerError,
-             litellm.APIConnectionError, litellm.Timeout)
+RETRYABLE = (
+    litellm.RateLimitError,
+    litellm.ServiceUnavailableError,
+    litellm.InternalServerError,
+    litellm.APIConnectionError,
+    litellm.Timeout,
+)
 
 
 def _retry_delay(error: Exception, attempt: int) -> float:
     """Use the provider's suggested delay if it gives one ("retry in 49.4s"), else back off exponentially."""
     match = re.search(r"retry in ([0-9.]+)s", str(error), re.IGNORECASE)
-    return float(match.group(1)) + 1 if match else min(60, 2 ** attempt)
+    return float(match.group(1)) + 1 if match else min(60, 2**attempt)
 
 
 def _call_with_retries(**kwargs):
@@ -65,8 +71,10 @@ def _call_with_retries(**kwargs):
             if attempt > LLM_RETRIES:
                 raise
             delay = _retry_delay(e, attempt)
-            print(f"  [{type(e).__name__}] retrying {kwargs['model']} in {delay:.0f}s "
-                  f"(attempt {attempt}/{LLM_RETRIES})", file=sys.stderr)
+            print(
+                f"  [{type(e).__name__}] retrying {kwargs['model']} in {delay:.0f}s (attempt {attempt}/{LLM_RETRIES})",
+                file=sys.stderr,
+            )
             time.sleep(delay)
 
 
@@ -87,8 +95,9 @@ def complete(model: str, messages: list[dict], tools: list[dict] | None = None) 
     # Keep the full message (including provider-specific fields such as Gemini's thought
     # signatures) so it can be sent back unchanged on the next call.
     message = choice.message.model_dump(exclude_none=True)
-    tool_calls = [ToolCall(tc.id, tc.function.name, tc.function.arguments or "{}")
-                  for tc in (choice.message.tool_calls or [])]
+    tool_calls = [
+        ToolCall(tc.id, tc.function.name, tc.function.arguments or "{}") for tc in (choice.message.tool_calls or [])
+    ]
 
     u = response.usage
     details = getattr(u, "prompt_tokens_details", None)

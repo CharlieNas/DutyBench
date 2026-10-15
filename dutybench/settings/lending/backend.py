@@ -1,4 +1,5 @@
-"""In-memory backend for a fictional UK consumer lender, "Larkhaven Credit" (any resemblance to a real firm is unintended).
+"""In-memory backend for a fictional UK consumer lender, "Larkhaven Credit".
+Any resemblance to a real firm is unintended.
 
 Plain dicts, seeded per scenario, so every run starts from the same known state and grading can
 inspect exactly what the agent changed. Business rules here are the ones a real system would
@@ -65,8 +66,14 @@ class Backend:
 
     # --- writes -----------------------------------------------------------------------------
 
-    def assess_affordability(self, account_id: str, monthly_income: float, essential_outgoings: float,
-                             other_debt_repayments: float, proposed_monthly_payment: float | None) -> dict:
+    def assess_affordability(
+        self,
+        account_id: str,
+        monthly_income: float,
+        essential_outgoings: float,
+        other_debt_repayments: float,
+        proposed_monthly_payment: float | None,
+    ) -> dict:
         acc = self.account(account_id)
         disposable = round(monthly_income - essential_outgoings - other_debt_repayments, 2)
         max_affordable = max(0.0, disposable)
@@ -87,13 +94,16 @@ class Backend:
         self.affordability_checks.append(result)
         return result
 
-    def set_plan(self, account_id: str, plan_type: str, monthly_amount: float,
-                 duration_months: int, reason: str) -> dict:
+    def set_plan(
+        self, account_id: str, plan_type: str, monthly_amount: float, duration_months: int, reason: str
+    ) -> dict:
         acc = self.account(account_id)
         if plan_type == "payment_holiday" and monthly_amount != 0:
             raise BackendError("A payment_holiday must have monthly_amount 0. Use reduced_payment for a lower payment.")
         if plan_type == "reduced_payment" and monthly_amount <= 0:
-            raise BackendError("A reduced_payment plan needs monthly_amount above 0. Use payment_holiday to pause payments.")
+            raise BackendError(
+                "A reduced_payment plan needs monthly_amount above 0. Use payment_holiday to pause payments."
+            )
         if monthly_amount > acc["balance"]:
             raise BackendError(f"monthly_amount £{monthly_amount:.2f} is more than the balance £{acc['balance']:.2f}.")
         # The plan covers the next `duration_months` scheduled payments. A newer plan replaces an
@@ -112,7 +122,7 @@ class Backend:
             "normal_payments_resume": resumes.isoformat(),
             "collections_on_hold": True,
             "arrears_treatment": "Existing arrears are deferred while the plan runs and reviewed when it ends. "
-                                 "No collections contact or late fees while the plan is kept to.",
+            "No collections contact or late fees while the plan is kept to.",
         }
         self.payment_plans.append(plan)
         # Make the effect visible on the account, so the agent can confirm it to the customer.
@@ -125,24 +135,37 @@ class Backend:
 
     def add_note(self, account_id: str, note: str) -> dict:
         self.account(account_id)
-        entry = {"note_id": f"NOTE-{len(self.case_notes) + 1:03d}", "account_id": account_id,
-                 "date": self.today.isoformat(), "note": note}
+        entry = {
+            "note_id": f"NOTE-{len(self.case_notes) + 1:03d}",
+            "account_id": account_id,
+            "date": self.today.isoformat(),
+            "note": note,
+        }
         self.case_notes.append(entry)
         return entry
 
     def flag_vulnerability(self, customer_id: str, category: str, details: str) -> dict:
         self.customer(customer_id)
-        flag = {"flag_id": f"VUL-{len(self.vulnerability_flags) + 1:03d}", "customer_id": customer_id,
-                "category": category, "details": details, "date": self.today.isoformat()}
+        flag = {
+            "flag_id": f"VUL-{len(self.vulnerability_flags) + 1:03d}",
+            "customer_id": customer_id,
+            "category": category,
+            "details": details,
+            "date": self.today.isoformat(),
+        }
         self.vulnerability_flags.append(flag)
         return flag
 
     def refer_to_debt_advice(self, customer_id: str, provider: str) -> dict:
         self.customer(customer_id)
         websites = {"MoneyHelper": "https://www.moneyhelper.org.uk", "StepChange": "https://www.stepchange.org"}
-        referral = {"customer_id": customer_id, "provider": provider, "website": websites[provider],
-                    "date": self.today.isoformat(),
-                    "note": "Free, confidential debt advice. Shared with the customer as a referral."}
+        referral = {
+            "customer_id": customer_id,
+            "provider": provider,
+            "website": websites[provider],
+            "date": self.today.isoformat(),
+            "note": "Free, confidential debt advice. Shared with the customer as a referral.",
+        }
         self.debt_advice_referrals.append(referral)
         return referral
 
@@ -164,8 +187,14 @@ class Backend:
     def escalate(self, team: str, urgency: str, reason: str, customer_id: str | None) -> dict:
         if customer_id:
             self.customer(customer_id)
-        ticket = {"ticket_id": f"ESC-{len(self.escalations) + 1:03d}", "team": team, "urgency": urgency,
-                  "reason": reason, "customer_id": customer_id, "date": self.today.isoformat()}
+        ticket = {
+            "ticket_id": f"ESC-{len(self.escalations) + 1:03d}",
+            "team": team,
+            "urgency": urgency,
+            "reason": reason,
+            "customer_id": customer_id,
+            "date": self.today.isoformat(),
+        }
         self.escalations.append(ticket)
         return ticket
 
@@ -173,16 +202,28 @@ class Backend:
 
     def snapshot(self) -> dict:
         """The full state, saved at the end of each conversation so checks can inspect it."""
-        keys = ["customers", "accounts", "affordability_checks", "payment_plans", "case_notes",
-                "vulnerability_flags", "debt_advice_referrals", "complaints", "escalations"]
+        keys = [
+            "customers",
+            "accounts",
+            "affordability_checks",
+            "payment_plans",
+            "case_notes",
+            "vulnerability_flags",
+            "debt_advice_referrals",
+            "complaints",
+            "escalations",
+        ]
         return copy.deepcopy({k: getattr(self, k) for k in keys})
 
     # --- helpers ----------------------------------------------------------------------------
 
     def _customer_view(self, customer_id: str) -> dict:
         c = self.customer(customer_id)
-        return {"customer_id": customer_id, **{k: c[k] for k in ("name", "date_of_birth", "postcode")},
-                "authorised_third_parties": c.get("authorised_third_parties", [])}
+        return {
+            "customer_id": customer_id,
+            **{k: c[k] for k in ("name", "date_of_birth", "postcode")},
+            "authorised_third_parties": c.get("authorised_third_parties", []),
+        }
 
     def _account_view(self, account_id: str) -> dict:
         return {"account_id": account_id, **copy.deepcopy(self.accounts[account_id])}

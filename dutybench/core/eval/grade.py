@@ -1,8 +1,8 @@
 """Grade one conversation: deterministic checks first, then (optionally) the LLM judge."""
 
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from dutybench.core.eval import judge as judge_mod
 from dutybench.core.eval.checks import CORE_CHECKS, run_checks
@@ -28,7 +28,9 @@ def validate_scenario(scenario: dict, setting: Setting) -> None:
         if spec["kind"] not in ("required", "forbidden"):
             raise ValueError(f"{scenario['id']}/{spec['id']}: kind must be required or forbidden")
         if spec["rule"] not in known_rules:
-            raise ValueError(f"{scenario['id']}/{spec['id']}: rule {spec['rule']!r} is not in {setting.rules_file.name}")
+            raise ValueError(
+                f"{scenario['id']}/{spec['id']}: rule {spec['rule']!r} is not in {setting.rules_file.name}"
+            )
     for cid in scenario.get("judge", []):
         criterion = setting.judge_criteria.get(cid)
         if criterion is None:
@@ -37,16 +39,25 @@ def validate_scenario(scenario: dict, setting: Setting) -> None:
             raise ValueError(f"judge criterion {cid!r}: rule {criterion['rule']!r} is not in {setting.rules_file.name}")
 
 
-def grade(conv: Conversation, scenario: dict, setting: Setting, use_judge: bool = False,
-          complete: Callable | None = None) -> dict:
+def grade(
+    conv: Conversation, scenario: dict, setting: Setting, use_judge: bool = False, complete: Callable | None = None
+) -> dict:
     """Returns one grade record. `passed` means every check passed and, if judged, every criterion
     was marked "pass"."""
     validate_scenario(scenario, setting)
     checks = run_checks(conv, scenario.get("checks", []), all_checks(setting))
-    record = {"key": conv.key, "scenario_id": conv.scenario_id, "model": conv.model,
-              "condition": conv.condition, "run": conv.run, "status": conv.status,
-              "checks": checks, "checks_passed": all(c["passed"] for c in checks),
-              "judge": [], "judge_cost_usd": 0.0}
+    record = {
+        "key": conv.key,
+        "scenario_id": conv.scenario_id,
+        "model": conv.model,
+        "condition": conv.condition,
+        "run": conv.run,
+        "status": conv.status,
+        "checks": checks,
+        "checks_passed": all(c["passed"] for c in checks),
+        "judge": [],
+        "judge_cost_usd": 0.0,
+    }
     if use_judge:
         kwargs = {"complete": complete} if complete else {}
         record["judge"], record["judge_cost_usd"] = judge_mod.judge(conv, scenario, setting.judge_criteria, **kwargs)
