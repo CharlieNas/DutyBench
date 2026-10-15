@@ -1,5 +1,5 @@
-"""Play one scenario: a fresh lender backend, the agent under test, and the simulated customer,
-taking turns until the customer ends the chat or the turn limit is reached.
+"""Play one scenario: a fresh backend from the setting, the agent under test, and the simulated
+customer, taking turns until the customer ends the chat or the turn limit is reached.
 
     customer opening ─► agent ─► customer ─► agent ─► … ─► customer [END]
 
@@ -14,24 +14,13 @@ from typing import Callable
 import openai
 
 from dutybench.config import CUSTOMER_MODEL
-from dutybench.harness import llm
-from dutybench.harness.agent import Agent
-from dutybench.harness.trace import Tracer
-from dutybench.lender.backend import Backend
-from dutybench.lender.tools import make_tools
-from dutybench.sim.customer import SimulatedCustomer
+from dutybench.core import llm
+from dutybench.core.agent import Agent
+from dutybench.core.setting import Setting
+from dutybench.core.simulator import SimulatedCustomer
+from dutybench.core.trace import Tracer
 
-POLICY_DOC = (Path(__file__).resolve().parent.parent.parent / "policy" / "policy_doc.md").read_text()
 CONDITIONS = ("baseline", "grounded")
-
-AGENT_PROMPT = ("You are a customer support agent for Larkhaven Credit, a UK consumer lender. You help "
-                "customers with their loans and credit cards by chat. Today's date is 5 October 2026.")
-
-
-def session_line(session: dict) -> str:
-    if session.get("customer_id"):
-        return f"The person in this chat is logged in as customer {session['customer_id']}."
-    return "The person in this chat has not logged in, so their identity has not been verified."
 
 
 @dataclass
@@ -48,7 +37,7 @@ class Episode:
     error: str | None = None
 
 
-def run_episode(scenario: dict, model: str, condition: str = "baseline", run: int = 1,
+def run_episode(setting: Setting, scenario: dict, model: str, condition: str = "baseline", run: int = 1,
                 trace_dir: Path | None = None, customer_model: str = CUSTOMER_MODEL,
                 complete: Callable[..., llm.LLMResult] = llm.complete,
                 on_event: Callable[[dict], None] | None = None) -> Episode:
@@ -57,13 +46,13 @@ def run_episode(scenario: dict, model: str, condition: str = "baseline", run: in
 
     trace_path = trace_dir / f"{scenario['id']}__{model}__{condition}__r{run}.jsonl" if trace_dir else None
     tracer = Tracer(trace_path, on_event=on_event)
-    backend = Backend(scenario["seed"])
-    agent = Agent(model=model, tools=make_tools(backend), tracer=tracer, complete=complete,
-                  system_prompt=AGENT_PROMPT + " " + session_line(scenario["session"]),
-                  policy_doc=POLICY_DOC if condition == "grounded" else None)
-    customer = SimulatedCustomer(scenario, customer_model, tracer, complete=complete)
-    tracer.log("episode_start", scenario_id=scenario["id"], model=model, condition=condition, run=run,
-               customer_model=customer_model, system_prompt=agent.messages[0]["content"])
+    backend = setting.make_backend(scenario["seed"])
+    agent = Agent(model=model, tools=setting.make_tools(backend), tracer=tracer, complete=complete,
+                  system_prompt=setting.agent_prompt + " " + setting.session_line(scenario["session"]),
+                  policy_doc=setting.policy_doc if condition == "grounded" else None)
+    customer = SimulatedCustomer(scenario, setting.customer_context, customer_model, tracer, complete=complete)
+    tracer.log("episode_start", setting=setting.name, scenario_id=scenario["id"], model=model, condition=condition,
+               run=run, customer_model=customer_model, system_prompt=agent.messages[0]["content"])
 
     transcript: list[dict] = []
     status, error = "max_turns", None

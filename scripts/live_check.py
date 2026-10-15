@@ -13,9 +13,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from dutybench.config import MODELS
-from dutybench.harness.agent import Agent
-from dutybench.harness.tools import Tool, ToolError
-from dutybench.harness.trace import Tracer
+from dutybench.core.agent import Agent
+from dutybench.core.tools import Tool, ToolError
+from dutybench.core.trace import Tracer
 
 KEY_FOR = {"openai/": "OPENAI_API_KEY", "gemini/": "GEMINI_API_KEY", "anthropic/": "ANTHROPIC_API_KEY",
            "deepseek/": "DEEPSEEK_API_KEY"}

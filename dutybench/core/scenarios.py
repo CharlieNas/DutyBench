@@ -1,10 +1,9 @@
-"""Load scenario YAML files from dutybench/scenarios/."""
+"""Load a setting's scenario YAML files."""
 
 from pathlib import Path
 
 import yaml
 
-SCENARIO_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 REQUIRED_KEYS = {"id", "title", "session", "seed", "customer", "max_turns"}
 REQUIRED_CUSTOMER_KEYS = {"opening_message", "persona", "reveal", "goal"}
 
@@ -19,9 +18,9 @@ def load_scenario(path: Path) -> dict:
     return scenario
 
 
-def load_scenarios(ids: list[str] | None = None) -> list[dict]:
+def load_scenarios(scenario_dir: Path, ids: list[str] | None = None) -> list[dict]:
     """All scenarios in id order, or only the given ids (e.g. ["S01", "S08"])."""
-    scenarios = [load_scenario(p) for p in sorted(SCENARIO_DIR.glob("S*.yaml"))]
+    scenarios = [load_scenario(p) for p in sorted(scenario_dir.glob("S*.yaml"))]
     if ids:
         unknown = set(ids) - {s["id"] for s in scenarios}
         if unknown:

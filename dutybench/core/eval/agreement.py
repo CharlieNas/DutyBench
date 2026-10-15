@@ -15,8 +15,8 @@ import random
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from dutybench.grading.conversation import Conversation
-from dutybench.grading.judge import LABELS, RUBRIC
+from dutybench.core.eval.conversation import Conversation
+from dutybench.core.eval.judge import LABELS
 
 
 def cohens_kappa(pairs: list[tuple[str, str]]) -> float | None:
@@ -30,7 +30,7 @@ def cohens_kappa(pairs: list[tuple[str, str]]) -> float | None:
     return None if expected == 1 else (observed - expected) / (1 - expected)
 
 
-def export_for_hand_grading(grades: list[dict], conversations: dict[str, Conversation],
+def export_for_hand_grading(grades: list[dict], conversations: dict[str, Conversation], criteria: dict[str, dict],
                             out_dir: Path, n: int = 20, seed: int = 0) -> Path:
     """Sample up to n judged conversations and write the blind hand-grading pack."""
     judged = [g for g in grades if g["judge"]]
@@ -42,7 +42,7 @@ def export_for_hand_grading(grades: list[dict], conversations: dict[str, Convers
         key[cid] = g["key"]
         pages.append(f"# {cid}\n\n{conversations[g['key']].transcript(with_tools=True)}\n")
         for j in g["judge"]:
-            c = RUBRIC["criteria"][j["id"]]
+            c = criteria[j["id"]]
             rows.append({"conversation": cid, "criterion": j["id"], "question": c["question"],
                          "pass_means": c["pass"], "partial_means": c["partial"], "fail_means": c["fail"],
                          "human_label": ""})

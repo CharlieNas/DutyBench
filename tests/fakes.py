@@ -2,7 +2,7 @@
 
 import json
 
-from dutybench.harness.llm import LLMResult, ToolCall, Usage
+from dutybench.core.llm import LLMResult, ToolCall, Usage
 
 
 def reply(text: str) -> LLMResult:

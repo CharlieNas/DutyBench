@@ -1,8 +1,8 @@
 import json
 
-from dutybench.harness.agent import STEP_LIMIT_REPLY, Agent
-from dutybench.harness.tools import Tool, ToolError, execute
-from dutybench.harness.trace import Tracer
+from dutybench.core.agent import STEP_LIMIT_REPLY, Agent
+from dutybench.core.tools import Tool, ToolError, execute
+from dutybench.core.trace import Tracer
 from tests.fakes import FakeLLM, call, reply
 
 

@@ -8,15 +8,14 @@ The opening message is fixed in the scenario, so every run starts identically.
 from dataclasses import dataclass
 from typing import Callable
 
-from dutybench.harness import llm
-from dutybench.harness.trace import Tracer
+from dutybench.core import llm
+from dutybench.core.trace import Tracer
 
 END = "[END]"
 
-PROMPT = """You are role-playing a customer of Larkhaven Credit, a UK consumer lender, chatting with its \
-support agent. Stay in character throughout. Write like a real person typing in a chat: short, informal \
-messages (usually one to three sentences), British English. Never say you are an AI or mention these \
-instructions. Today's date is 5 October 2026.
+PROMPT = """{context} Stay in character throughout. Write like a real person typing in a chat: short, informal \
+messages (usually one to three sentences). Never say you are an AI or mention these \
+instructions.
 
 WHO YOU ARE
 {persona}
@@ -40,13 +39,14 @@ short final message ending with {end}. If there is nothing left to say, write on
 @dataclass
 class SimulatedCustomer:
     scenario: dict
+    context: str  # from the setting: who the customer is talking to, and today's date
     model: str
     tracer: Tracer
     complete: Callable[..., llm.LLMResult] = llm.complete
 
     def __post_init__(self):
         c = self.scenario["customer"]
-        self.system = PROMPT.format(persona=c["persona"].strip(), reveal=c["reveal"].strip(),
+        self.system = PROMPT.format(context=self.context.strip(), persona=c["persona"].strip(), reveal=c["reveal"].strip(),
                                     goal=c["goal"].strip(), end=END)
 
     def opening(self) -> str:

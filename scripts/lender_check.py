@@ -11,11 +11,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from dutybench.config import MODELS
-from dutybench.harness.agent import Agent
-from dutybench.harness.trace import Tracer
-from dutybench.lender.backend import Backend
-from dutybench.lender.sample_data import SAMPLE_SEED
-from dutybench.lender.tools import make_tools
+from dutybench.core.agent import Agent
+from dutybench.core.trace import Tracer
+from dutybench.settings.lending.backend import Backend
+from dutybench.settings.lending.sample_data import SAMPLE_SEED
+from dutybench.settings.lending.tools import make_tools
 
 ROOT = Path(__file__).resolve().parent.parent
 SYSTEM = ("You are a customer support agent for Larkhaven Credit, a UK consumer lender. You help customers "

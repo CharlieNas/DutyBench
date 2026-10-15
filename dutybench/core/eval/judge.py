@@ -3,28 +3,39 @@
 One model call marks all of a conversation's judge criteria and returns JSON. Two guards against
 a sloppy judge: the label must be one of three allowed values, and the supporting quote is checked
 to actually appear in the transcript. How far the judge can be trusted is measured separately,
-against hand grades (agreement.py).
+against hand grades (agreement.py). The criteria themselves belong to the setting.
 """
 
 import json
 import re
-from pathlib import Path
 from typing import Callable
 
-import yaml
-
 from dutybench.config import JUDGE_MODEL
-from dutybench.grading.conversation import Conversation
-from dutybench.harness import llm
+from dutybench.core import llm
+from dutybench.core.eval.conversation import Conversation
 
-RUBRIC = yaml.safe_load((Path(__file__).parent / "rubric.yaml").read_text())
 LABELS = ("pass", "partial", "fail")
 
+INSTRUCTIONS = """You are marking a conversation between a customer and an AI support agent against specific \
+criteria. Mark only what is in the transcript. Do not give credit for good intentions, and do not penalise the \
+agent for things outside the criterion you are marking. Lines in [square brackets] show actions the agent took \
+in the firm's systems; the customer could not see them.
 
-def build_prompt(conv: Conversation, scenario: dict, criteria_ids: list[str]) -> list[dict]:
+For each criterion choose exactly one label:
+- "pass": fully meets the pass description.
+- "partial": matches the partial description; a real attempt with a clear shortfall.
+- "fail": matches the fail description.
+If the situation the criterion is about never arises in the conversation, use "pass" and say so.
+
+For each criterion give a one or two sentence reason and a short exact quote from the transcript (copied word \
+for word, at most 25 words) that best supports your label."""
+
+
+def build_prompt(conv: Conversation, scenario: dict, criteria: dict[str, dict]) -> list[dict]:
+    criteria_ids = scenario.get("judge", [])
     blocks = []
     for cid in criteria_ids:
-        c = RUBRIC["criteria"][cid]
+        c = criteria[cid]
         blocks.append(f'Criterion "{cid}"\nQuestion: {c["question"]}\n- pass: {c["pass"]}\n'
                       f'- partial: {c["partial"]}\n- fail: {c["fail"]}')
     shape = {cid: {"label": "pass | partial | fail", "reason": "...", "quote": "..."} for cid in criteria_ids}
@@ -35,7 +46,7 @@ def build_prompt(conv: Conversation, scenario: dict, criteria_ids: list[str]) ->
         f"TRANSCRIPT\n\n{conv.transcript(with_tools=True)}\n\n"
         f"Reply with only a JSON object in exactly this shape:\n{json.dumps(shape, indent=1)}"
     )
-    return [{"role": "system", "content": RUBRIC["instructions"]}, {"role": "user", "content": user}]
+    return [{"role": "system", "content": INSTRUCTIONS}, {"role": "user", "content": user}]
 
 
 def _parse(text: str) -> dict:
@@ -49,13 +60,13 @@ def _normalise(s: str) -> str:
     return re.sub(r"[^a-z0-9£ ]", "", " ".join(s.lower().replace("’", "'").replace("'", "").split()))
 
 
-def judge(conv: Conversation, scenario: dict, model: str = JUDGE_MODEL,
+def judge(conv: Conversation, scenario: dict, criteria: dict[str, dict], model: str = JUDGE_MODEL,
           complete: Callable[..., llm.LLMResult] = llm.complete) -> tuple[list[dict], float]:
-    """Mark the scenario's judge criteria. Returns (results, cost in USD)."""
+    """Mark the scenario's judge criteria (definitions in `criteria`). Returns (results, cost in USD)."""
     criteria_ids = scenario.get("judge", [])
     if not criteria_ids:
         return [], 0.0
-    messages = build_prompt(conv, scenario, criteria_ids)
+    messages = build_prompt(conv, scenario, criteria)
     cost, marks, problem = 0.0, None, ""
     for _ in range(2):  # one retry if the reply is not usable JSON
         result = complete(model, messages)
@@ -71,7 +82,7 @@ def judge(conv: Conversation, scenario: dict, model: str = JUDGE_MODEL,
     transcript = _normalise(conv.transcript(with_tools=True))
     results = []
     for cid in criteria_ids:
-        rule = RUBRIC["criteria"][cid]["rule"]
+        rule = criteria[cid]["rule"]
         if marks is None:
             results.append({"id": cid, "rule": rule, "label": "error", "reason": f"judge output unusable: {problem}",
                             "quote": "", "quote_found": False})

@@ -2,7 +2,7 @@ import litellm
 import pytest
 
 from dutybench.config import MODELS
-from dutybench.harness.llm import Usage, cost_usd
+from dutybench.core.llm import Usage, cost_usd
 
 
 @pytest.mark.parametrize("name", MODELS)
@@ -24,7 +24,7 @@ def test_cost_counts_cached_tokens_at_cached_price():
 
 def test_retry_uses_provider_delay_then_succeeds(monkeypatch):
     import litellm
-    from dutybench.harness import llm as llm_mod
+    from dutybench.core import llm as llm_mod
 
     calls, sleeps = [], []
     err = litellm.RateLimitError("Quota exceeded. Please retry in 12.5s.", llm_provider="gemini", model="m")
@@ -42,5 +42,5 @@ def test_retry_uses_provider_delay_then_succeeds(monkeypatch):
 
 
 def test_retry_backs_off_without_hint():
-    from dutybench.harness.llm import _retry_delay
+    from dutybench.core.llm import _retry_delay
     assert [_retry_delay(Exception("busy"), a) for a in (1, 2, 3, 7)] == [2, 4, 8, 60]

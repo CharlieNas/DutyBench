@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from dutybench.harness.tools import execute
-from dutybench.lender.backend import Backend
-from dutybench.lender.sample_data import SAMPLE_SEED
-from dutybench.lender.tools import make_tools
+from dutybench.core.tools import execute
+from dutybench.settings.lending.backend import Backend
+from dutybench.settings.lending.sample_data import SAMPLE_SEED
+from dutybench.settings.lending.tools import make_tools
 
 
 @pytest.fixture

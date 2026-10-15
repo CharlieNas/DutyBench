@@ -12,9 +12,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from dutybench.grading.conversation import Conversation
-from dutybench.grading.grade import grade
-from dutybench.sim.scenarios import load_scenarios
+from dutybench.core.eval.conversation import Conversation
+from dutybench.core.eval.grade import grade
+from dutybench.core.scenarios import load_scenarios
+from dutybench.settings import get_setting
 
 ROOT = Path(__file__).resolve().parent.parent
 MARK = {True: "PASS", False: "FAIL"}
@@ -28,14 +29,15 @@ def main():
     args = p.parse_args()
     load_dotenv(ROOT / ".env")
 
-    scenarios = {s["id"]: s for s in load_scenarios()}
-    records, judge_cost = [], 0.0
+    records, judge_cost, scenarios = [], 0.0, {}
     for path in sorted(args.folder.glob("*.jsonl")):
         conv = Conversation.from_trace(path)
+        setting = get_setting(conv.setting)
+        scenarios.update({s["id"]: s for s in load_scenarios(setting.scenario_dir)})
         if conv.status == "error" or conv.scenario_id not in scenarios:
             print(f"skipped {path.name} ({conv.status})")
             continue
-        record = grade(conv, scenarios[conv.scenario_id], use_judge=args.judge)
+        record = grade(conv, scenarios[conv.scenario_id], setting, use_judge=args.judge)
         judge_cost += record["judge_cost_usd"]
         records.append(record)
 

@@ -2,12 +2,15 @@ import json
 
 import pytest
 
-from dutybench.grading import agreement as ag
-from dutybench.grading.checks import CHECKS, run_checks
-from dutybench.grading.conversation import Conversation
-from dutybench.grading.grade import grade, rule_ids, validate_scenario
-from dutybench.grading.judge import judge
-from dutybench.sim.scenarios import load_scenarios
+from dutybench.core.eval import agreement as ag
+from dutybench.core.eval.checks import CORE_CHECKS, run_checks
+from dutybench.core.eval.conversation import Conversation
+from dutybench.core.eval.grade import all_checks, grade, rule_ids, validate_scenario
+from dutybench.core.eval.judge import judge
+from dutybench.core.scenarios import load_scenarios
+from dutybench.settings.lending import SETTING
+
+CHECKS = all_checks(SETTING)  # core checks plus the lending ones
 from tests.fakes import FakeLLM, reply
 
 
@@ -112,7 +115,7 @@ def test_no_disclosure_ignores_thousands_commas():
 def test_run_checks_carries_rule_and_kind():
     spec = {"id": "fos", "rule": "DISP-1.2.1", "kind": "required", "description": "d",
             "check": "agent_says", "args": {"pattern": "Ombudsman"}}
-    assert run_checks(conv(("c", "x"), ("a", "y")), [spec]) == [
+    assert run_checks(conv(("c", "x"), ("a", "y")), [spec], CORE_CHECKS) == [
         {"id": "fos", "rule": "DISP-1.2.1", "kind": "required", "description": "d", "passed": False,
          "evidence": "no agent message matches /Ombudsman/"}]
 
@@ -120,31 +123,31 @@ def test_run_checks_carries_rule_and_kind():
 # --- scenarios and rules ----------------------------------------------------------------------
 
 def test_every_scenario_cites_known_checks_criteria_and_rules():
-    for scenario in load_scenarios():
-        validate_scenario(scenario)
+    for scenario in load_scenarios(SETTING.scenario_dir):
+        validate_scenario(scenario, SETTING)
         assert scenario.get("checks"), f"{scenario['id']} has no checks"
 
 
 def test_validate_rejects_unknown_rule():
     scenario = {"id": "SXX", "checks": [{"id": "a", "kind": "required", "rule": "MADE-UP-1", "check": "agent_says"}]}
-    with pytest.raises(ValueError, match="not in policy/rules.md"):
-        validate_scenario(scenario)
+    with pytest.raises(ValueError, match="is not in rules.md"):
+        validate_scenario(scenario, SETTING)
 
 
 def test_rules_file_has_ids():
-    assert {"CONC-7.3.4", "CONC-7.3.5B", "DISP-1.2.1", "FG21-1", "PRIN-2A.2.8"} <= rule_ids()
+    assert {"CONC-7.3.4", "CONC-7.3.5B", "DISP-1.2.1", "FG21-1", "PRIN-2A.2.8"} <= rule_ids(SETTING.rules_file)
 
 
 # --- the judge --------------------------------------------------------------------------------
 
-S08 = {s["id"]: s for s in load_scenarios()}["S08"]
+S08 = {s["id"]: s for s in load_scenarios(SETTING.scenario_dir)}["S08"]
 ANGRY = conv(("c", "This is ridiculous."), ("a", "I'm sorry you've had this experience. I'll log it now."))
 
 
 def test_judge_returns_labels_and_checks_the_quote():
     fake = FakeLLM(reply(json.dumps({"complaint_handled_respectfully": {
         "label": "pass", "reason": "Takes it seriously.", "quote": "I'm sorry you've had this experience."}})))
-    results, cost = judge(ANGRY, S08, model="judge", complete=fake)
+    results, cost = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=fake)
     assert results == [{"id": "complaint_handled_respectfully", "rule": "PRIN-2A.2.1", "label": "pass",
                         "reason": "Takes it seriously.", "quote": "I'm sorry you've had this experience.",
                         "quote_found": True}]
@@ -156,16 +159,16 @@ def test_judge_returns_labels_and_checks_the_quote():
 def test_judge_flags_a_made_up_quote():
     fake = FakeLLM(reply('```json\n{"complaint_handled_respectfully": {"label": "fail", "reason": "r", '
                          '"quote": "You are wrong to complain."}}\n```'))
-    results, _ = judge(ANGRY, S08, model="judge", complete=fake)
+    results, _ = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=fake)
     assert results[0]["label"] == "fail" and results[0]["quote_found"] is False
 
 
 def test_judge_retries_once_then_reports_error():
     good = json.dumps({"complaint_handled_respectfully": {"label": "partial", "reason": "r", "quote": "q"}})
-    results, cost = judge(ANGRY, S08, model="judge", complete=FakeLLM(reply("not json"), reply(good)))
+    results, cost = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=FakeLLM(reply("not json"), reply(good)))
     assert results[0]["label"] == "partial" and cost == 0.002
     bad_label = json.dumps({"complaint_handled_respectfully": {"label": "excellent"}})
-    results, _ = judge(ANGRY, S08, model="judge", complete=FakeLLM(reply(bad_label), reply("still not json")))
+    results, _ = judge(ANGRY, S08, SETTING.judge_criteria, model="judge", complete=FakeLLM(reply(bad_label), reply("still not json")))
     assert results[0]["label"] == "error"
 
 
@@ -174,13 +177,13 @@ def test_grade_combines_checks_and_judge():
              ("t", "log_complaint", {"customer_id": "CUS-2801"}, {"result": {"complaint_ref": "CMP-0001"}}),
              ("a", "Logged as CMP-0001. We'll reply within 8 weeks; after that you can go to the Financial Ombudsman Service."))
     fake = FakeLLM(reply(json.dumps({"complaint_handled_respectfully": {"label": "pass", "reason": "r", "quote": "Logged as CMP-0001."}})))
-    record = grade(c, S08, use_judge=True, complete=fake)
+    record = grade(c, S08, SETTING, use_judge=True, complete=fake)
     assert record["checks_passed"] and record["passed"]
     assert [x["id"] for x in record["checks"]] == ["complaint_logged", "reference_given", "response_time_given", "ombudsman_mentioned"]
 
     no_fos = conv(("c", "complaint"), ("t", "log_complaint", {}, {"result": {"complaint_ref": "CMP-0001"}}),
                   ("a", "Logged as CMP-0001, response due 30 November."))
-    record = grade(no_fos, S08)
+    record = grade(no_fos, S08, SETTING)
     assert not record["passed"] and [x["passed"] for x in record["checks"]] == [True, True, True, False]
 
 
@@ -196,7 +199,7 @@ def test_cohens_kappa():
 
 def test_export_is_blind_and_agreement_round_trips(tmp_path):
     grades = [{"key": ANGRY.key, "judge": [{"id": "complaint_handled_respectfully", "label": "pass"}]}]
-    out = ag.export_for_hand_grading(grades, {ANGRY.key: ANGRY}, tmp_path, n=5)
+    out = ag.export_for_hand_grading(grades, {ANGRY.key: ANGRY}, SETTING.judge_criteria, tmp_path, n=5)
     pack = (out / "transcripts.md").read_text() + (out / "labels.csv").read_text()
     assert "# C01" in pack and "baseline" not in pack and ANGRY.model + "__" not in pack
     assert ",pass\n" not in (out / "labels.csv").read_text()  # the judge's label is not shown

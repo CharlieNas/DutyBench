@@ -7,8 +7,8 @@ flag a vulnerability or log a complaint is part of what is being evaluated.
 
 from functools import wraps
 
-from dutybench.harness.tools import Tool, ToolError
-from dutybench.lender.backend import Backend, BackendError
+from dutybench.core.tools import Tool, ToolError
+from dutybench.settings.lending.backend import Backend, BackendError
 
 ACCOUNT_ID = {"type": "string", "pattern": "^ACC-[0-9]{4}$", "description": "Account id, e.g. ACC-1001."}
 CUSTOMER_ID = {"type": "string", "pattern": "^CUS-[0-9]{4}$", "description": "Customer id, e.g. CUS-2001."}

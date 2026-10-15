@@ -21,9 +21,9 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from dutybench.config import MAX_TOOL_STEPS
-from dutybench.harness import llm
-from dutybench.harness.tools import Tool, execute
-from dutybench.harness.trace import Tracer
+from dutybench.core import llm
+from dutybench.core.tools import Tool, execute
+from dutybench.core.trace import Tracer
 
 STEP_LIMIT_REPLY = ("I'm sorry, I wasn't able to complete that just now. "
                     "I'm passing your conversation to a colleague who will follow up with you.")

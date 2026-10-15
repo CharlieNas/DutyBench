@@ -14,8 +14,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from dutybench.config import MODELS
-from dutybench.sim.runner import CONDITIONS, run_episode
-from dutybench.sim.scenarios import load_scenarios
+from dutybench.core.runner import CONDITIONS, run_episode
+from dutybench.core.scenarios import load_scenarios
+from dutybench.settings import SETTING_NAMES, get_setting
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -34,19 +35,21 @@ def show(event: dict):
 
 def main():
     p = argparse.ArgumentParser()
+    p.add_argument("--setting", default="lending", choices=SETTING_NAMES)
     p.add_argument("--scenarios", nargs="+")
     p.add_argument("--models", nargs="+", default=list(MODELS), choices=list(MODELS))
     p.add_argument("--conditions", nargs="+", default=["baseline"], choices=CONDITIONS)
     p.add_argument("--out", default="play", help="folder under traces/ to write to")
     args = p.parse_args()
     load_dotenv(ROOT / ".env")
+    setting = get_setting(args.setting)
 
     total = 0.0
-    for scenario in load_scenarios(args.scenarios):
+    for scenario in load_scenarios(setting.scenario_dir, args.scenarios):
         for model in args.models:
             for condition in args.conditions:
                 print(f"\n{'=' * 100}\n{scenario['id']} {scenario['title']} | {model} | {condition}")
-                ep = run_episode(scenario, model, condition, trace_dir=ROOT / "traces" / args.out, on_event=show)
+                ep = run_episode(setting, scenario, model, condition, trace_dir=ROOT / "traces" / args.out, on_event=show)
                 cost = ep.totals["agent"]["cost_usd"] + ep.totals["customer"]["cost_usd"]
                 total += cost
                 print(f"\n  [{ep.status}{': ' + ep.error if ep.error else ''}] "

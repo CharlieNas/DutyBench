@@ -31,6 +31,7 @@ class Conversation:
     condition: str
     run: int
     status: str
+    setting: str = "lending"  # traces from before settings existed are all lending
     turns: list[dict] = field(default_factory=list)  # [{"role": "customer" | "agent", "text": ...}]
     tool_calls: list[ToolCall] = field(default_factory=list)
     final_state: dict = field(default_factory=dict)
@@ -71,7 +72,8 @@ class Conversation:
         start = next(e for e in events if e["type"] == "episode_start")
         end = next((e for e in events if e["type"] == "episode_end"), {})
         conv = cls(start["scenario_id"], start["model"], start["condition"], start["run"],
-                   end.get("status", "incomplete"), final_state=end.get("final_state", {}),
+                   end.get("status", "incomplete"), setting=start.get("setting", "lending"),
+                   final_state=end.get("final_state", {}),
                    totals=end.get("totals", {}))
         turn = 0
         for e in events:
