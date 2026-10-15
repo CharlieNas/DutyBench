@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+from pydantic import BaseModel, ConfigDict
 
 from dutybench.config import MODELS
 from dutybench.core.agent import Agent
@@ -28,13 +29,13 @@ def next_payment(account_id: str) -> dict:
     return {"account_id": account_id, "next_payment_date": "2026-10-28", "amount_gbp": 187.40}
 
 
-TOOL = Tool(
-    name="get_next_payment",
-    description="Get the date and amount of a loan account's next scheduled payment.",
-    parameters={"type": "object", "properties": {"account_id": {"type": "string"}},
-                "required": ["account_id"], "additionalProperties": False},
-    fn=next_payment,
-)
+class NextPaymentArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    account_id: str
+
+
+TOOL = Tool(name="get_next_payment", description="Get the date and amount of a loan account's next scheduled payment.",
+            params=NextPaymentArgs, fn=next_payment)
 
 
 def main():

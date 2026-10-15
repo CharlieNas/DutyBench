@@ -4,6 +4,8 @@ import ast
 import json
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from dutybench.core.eval.conversation import Conversation
 from dutybench.core.eval.grade import grade
 from dutybench.core.runner import run_episode
@@ -42,9 +44,12 @@ class Library:
         return {"loans": self.loans, "renewals": self.renewals}
 
 
+class RenewArgs(BaseModel):
+    book_id: str
+
+
 def renew_tool(lib: Library) -> list[Tool]:
-    schema = {"type": "object", "properties": {"book_id": {"type": "string"}}, "required": ["book_id"]}
-    return [Tool("renew_book", "Renew a borrowed book.", schema, lib.renew)]
+    return [Tool("renew_book", "Renew a borrowed book.", RenewArgs, lib.renew)]
 
 
 def renewal_recorded(conv: Conversation, book_id: str):

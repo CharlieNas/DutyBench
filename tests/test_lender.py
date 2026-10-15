@@ -19,14 +19,19 @@ def lender():
     return backend, run
 
 
-def test_nine_tools_with_valid_schemas():
-    from jsonschema import Draft202012Validator
+def test_nine_tools_with_strict_object_schemas():
     tools = make_tools(Backend(SAMPLE_SEED))
     assert [t.name for t in tools] == [
         "lookup_account", "get_payment_history", "propose_payment_plan", "set_payment_plan", "add_case_note",
         "flag_vulnerability", "refer_to_debt_advice", "log_complaint", "escalate_to_human"]
     for t in tools:
-        Draft202012Validator.check_schema(t.parameters)
+        params = t.spec()["function"]["parameters"]
+        assert params["type"] == "object" and params["additionalProperties"] is False, t.name
+
+
+def test_defaults_come_from_the_arguments_model(lender):
+    _, run = lender
+    assert len(run("get_payment_history", account_id="ACC-1001")["result"]) == 4  # months defaults to 6
 
 
 def test_each_run_starts_from_the_seed(lender):
@@ -62,7 +67,7 @@ def test_unknown_account_is_a_readable_error(lender):
 
 def test_bad_id_format_caught_by_schema(lender):
     _, run = lender
-    assert "does not match" in run("lookup_account", account_id="1001")["error"]
+    assert "String should match pattern" in run("lookup_account", account_id="1001")["error"]
 
 
 def test_payment_history_most_recent_last(lender):
@@ -105,12 +110,13 @@ def test_plan_business_rules(lender):
     assert "must have monthly_amount 0" in run("set_payment_plan", plan_type="payment_holiday", monthly_amount=50, **base)["error"]
     assert "needs monthly_amount above 0" in run("set_payment_plan", plan_type="reduced_payment", monthly_amount=0, **base)["error"]
     assert "more than the balance" in run("set_payment_plan", plan_type="reduced_payment", monthly_amount=9999, **base)["error"]
-    assert "is not one of" in run("set_payment_plan", plan_type="skip_forever", monthly_amount=0, **base)["error"]
+    assert "Input should be 'reduced_payment' or 'payment_holiday'" in run(
+        "set_payment_plan", plan_type="skip_forever", monthly_amount=0, **base)["error"]
 
 
 def test_vulnerability_flag_uses_fg21_1_drivers(lender):
     backend, run = lender
-    assert "is not one of" in run("flag_vulnerability", customer_id="CUS-2001", category="sad", details="x" * 5)["error"]
+    assert "Input should be 'health'" in run("flag_vulnerability", customer_id="CUS-2001", category="sad", details="x" * 5)["error"]
     run("flag_vulnerability", customer_id="CUS-2001", category="life_event", details="Recent bereavement (mother).")
     assert backend.vulnerability_flags[0]["category"] == "life_event"
 

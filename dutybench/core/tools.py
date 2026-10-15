@@ -1,14 +1,14 @@
-"""Tools: a name, a description, a JSON schema and a Python function.
+"""Tools: a name, a description, a pydantic model for the arguments, and a Python function.
 
-The same schema is sent to the model and used to validate what the model sends back,
-so there is one source of truth for each tool's inputs.
+The pydantic model is the one source of truth for a tool's inputs: it generates the JSON schema
+sent to the model, and it validates the arguments the model sends back.
 """
 
 import json
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from jsonschema import Draft202012Validator
+from pydantic import BaseModel, ValidationError
 
 
 class ToolError(Exception):
@@ -19,18 +19,27 @@ class ToolError(Exception):
 class Tool:
     name: str
     description: str
-    parameters: dict  # JSON schema for the arguments object
+    params: type[BaseModel]  # the arguments; use extra="forbid" so unknown arguments are rejected
     fn: Callable[..., Any]
 
     def spec(self) -> dict:
         """The tool definition in the (OpenAI-style) format LiteLLM expects."""
         return {"type": "function", "function": {
-            "name": self.name, "description": self.description, "parameters": self.parameters}}
+            "name": self.name, "description": self.description, "parameters": _clean(self.params.model_json_schema())}}
 
 
-def _describe(error) -> str:
-    where = ".".join(str(p) for p in error.absolute_path) or "arguments"
-    return f"{where}: {error.message}"
+def _clean(schema: Any) -> Any:
+    """Drop pydantic's auto-generated "title" fields: they repeat the field names and cost tokens."""
+    if isinstance(schema, dict):
+        return {k: _clean(v) for k, v in schema.items() if not (k == "title" and isinstance(v, str))}
+    if isinstance(schema, list):
+        return [_clean(v) for v in schema]
+    return schema
+
+
+def _describe(error: dict) -> str:
+    where = ".".join(str(p) for p in error["loc"]) or "arguments"
+    return f"{where}: {error['msg']}"
 
 
 def execute(tools: dict[str, Tool], name: str, raw_arguments: str) -> dict:
@@ -50,11 +59,12 @@ def execute(tools: dict[str, Tool], name: str, raw_arguments: str) -> dict:
     if not isinstance(args, dict):
         return {"error": "Arguments must be a JSON object."}
 
-    problems = sorted(Draft202012Validator(tool.parameters).iter_errors(args), key=lambda e: list(e.path))
-    if problems:
-        return {"error": "Invalid arguments: " + "; ".join(_describe(p) for p in problems)}
+    try:
+        validated = tool.params.model_validate(args)
+    except ValidationError as e:
+        return {"error": "Invalid arguments: " + "; ".join(_describe(err) for err in e.errors())}
 
     try:
-        return {"result": tool.fn(**args)}
+        return {"result": tool.fn(**validated.model_dump())}
     except ToolError as e:
         return {"error": str(e)}

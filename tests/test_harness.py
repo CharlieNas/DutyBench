@@ -1,4 +1,7 @@
 import json
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from dutybench.core.agent import STEP_LIMIT_REPLY, Agent
 from dutybench.core.tools import Tool, ToolError, execute
@@ -12,13 +15,12 @@ def get_balance(account_id: str) -> dict:
     return {"balance": 120.5}
 
 
-BALANCE = Tool(
-    name="get_balance",
-    description="Get an account balance.",
-    parameters={"type": "object", "properties": {"account_id": {"type": "string", "pattern": "^ACC-"}},
-                "required": ["account_id"], "additionalProperties": False},
-    fn=get_balance,
-)
+class BalanceArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    account_id: Annotated[str, Field(pattern="^ACC-")]
+
+
+BALANCE = Tool(name="get_balance", description="Get an account balance.", params=BalanceArgs, fn=get_balance)
 
 
 def make_agent(fake, tmp_path=None, **kw):
@@ -45,12 +47,12 @@ def test_execute_bad_json():
 def test_execute_schema_errors_are_readable():
     out = execute({"get_balance": BALANCE}, "get_balance", '{"account_id": "X1", "extra": 1}')
     assert out["error"].startswith("Invalid arguments:")
-    assert "account_id: 'X1' does not match '^ACC-'" in out["error"]
-    assert "'extra' was unexpected" in out["error"]
+    assert "account_id: String should match pattern '^ACC-'" in out["error"]
+    assert "extra: Extra inputs are not permitted" in out["error"]
 
 
 def test_execute_missing_required():
-    assert "'account_id' is a required property" in execute({"get_balance": BALANCE}, "get_balance", "{}")["error"]
+    assert "account_id: Field required" in execute({"get_balance": BALANCE}, "get_balance", "{}")["error"]
 
 
 def test_execute_business_error():
@@ -91,7 +93,7 @@ def test_model_recovers_from_invalid_arguments():
     agent = make_agent(fake)
     assert agent.respond("balance?") == "Your balance is £120.50."
     first_result = [e for e in agent.tracer.events if e["type"] == "tool_call"][0]["output"]
-    assert "does not match" in first_result["error"]
+    assert "should match pattern" in first_result["error"]
 
 
 def test_step_limit_hands_over_and_is_recorded():
@@ -123,3 +125,9 @@ def test_text_sent_alongside_tool_calls_is_part_of_the_reply():
     first.message["content"] = first.text
     agent = make_agent(FakeLLM(first, reply("Your balance is £120.50.")))
     assert agent.respond("balance?") == "Sorry to hear that. Let me check your account.\n\nYour balance is £120.50."
+
+
+def test_spec_is_generated_from_the_arguments_model():
+    params = BALANCE.spec()["function"]["parameters"]
+    assert params == {"type": "object", "additionalProperties": False, "required": ["account_id"],
+                      "properties": {"account_id": {"type": "string", "pattern": "^ACC-"}}}  # no pydantic "title" noise

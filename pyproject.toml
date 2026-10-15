@@ -2,14 +2,12 @@
 name = "dutybench"
 version = "0.1.0"
 description = "Does a customer-support AI agent follow UK consumer-credit duties? A small hand-written agent harness plus an evaluation suite."
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
-    "litellm>=1.104",
-    "jsonschema>=4.26",
-    "pyyaml>=6.0",
+    "litellm>=1.104",   # model calls, behind our own core/llm.py interface
+    "pydantic>=2.13",   # tool argument models: schema for the model + validation
+    "pyyaml>=6.0",      # scenario files
     "python-dotenv>=1.2",
-    "fastapi>=0.142",
-    "uvicorn>=0.54",
 ]
 
 [project.optional-dependencies]
